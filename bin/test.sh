@@ -22,18 +22,33 @@ lum::fn::alias lum::help --help 1 LUM_TEST_CMDS
 lum::fn::alias lum::help help
 
 lum::fn lum::test::list 0 -a --list 1 LUM_TEST_CMDS -a list 0 0
-#$ `{--}`
+#$ [[prefix]]
 #
-# List known commands
+# List known commands.
+#
+# ((prefix))    Optional prefix for commands.
+#           If specified, this calls ``lum::fn::list``.
+#           If not used, this calls ``lum::help::list``.
 #
 lum::test::list() {
-  lum::help::list LUM_TEST_CMDS 20 "-" " '" "'"
+  if [ $# -eq 0 ]; then
+    lum::help::list LUM_TEST_CMDS 20 "-" " '" "'"
+  else
+    lum::fn::list "$@"
+  fi
 }
 
-if [ $# -lt 1 ]; then
+lum::fn lum::test::usage 0 -a --usage 1 LUM_TEST_CMDS -a usage 0 0
+#$ `{...}`
+#
+# Show script usage information.
+#
+lum::test::usage() {
   echo -n "Usage: "
   lum::help test.sh
   exit 1
-fi
+}
+
+[ $# -eq 0 ] && lum::test::usage
 
 lum::fn::run 1 "$@"

@@ -3,6 +3,8 @@
 [ -z "$LUM_CORE" ] && echo "lum::core not loaded" && exit 100
 [ -z "$LUM_USER_CONF_DIR" ] && LUM_USER_CONF_DIR=".lum"
 
+lum::use lum::use::from
+
 lum::lib lum::user $LUM_CORE
 
 lum::fn lum::user::home 

@@ -10,6 +10,7 @@ LUM_THEME[error]=$(lum::colour bold red)
 
 LUM_THEME[diag.func]=$(lum::colour yellow)
 LUM_THEME[diag.file]=$(lum::colour blue)
+LUM_THEME[diag.line]=$(lum::colour light black)
 
 LUM_THEME[help.syntax]=$(lum::colour light black)
 LUM_THEME[help.arg]=$(lum::colour bold blue)
