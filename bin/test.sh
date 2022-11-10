@@ -9,14 +9,14 @@ lum::use lum::themes::default lum::tmpl
 
 declare -a LUM_TEST_CMDS
 
-lum::fn test.sh 2 -t 0 8
+lum::fn lum::test-usage 2 -t 0 8 -a $SCRIPTNAME 1 0
 #$ <<command>> `{...}` 
 #
 #Commands:
 #@>lum::tmpl;
 #{{lum::test::list}}
 #
-#: test.sh
+#: lum::test-usage
 
 lum::fn::alias lum::help --help 1 LUM_TEST_CMDS
 lum::fn::alias lum::help help
@@ -45,7 +45,7 @@ lum::fn lum::test::usage 0 -a --usage 1 LUM_TEST_CMDS -a usage 0 0
 #
 lum::test::usage() {
   echo -n "Usage: "
-  lum::help test.sh
+  lum::help lum::test-usage
   exit 1
 }
 

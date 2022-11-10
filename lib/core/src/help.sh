@@ -21,13 +21,15 @@ lum::fn lum::help
 #
 lum::help() {
   [ $# -lt 1 ] && lum::help::usage
-  local prefind suffind dName fName="$1" want=${2:-0} S E output
+  local prefind suffind dName sName fName="$1" S E output
+  local -i want=${2:-0}
   local err="${LUM_THEME[error]}"
   local end="${LUM_THEME[end]}"
+  local -i SF=1 EF=2 DF=4
 
   [ -n "${LUM_ALIAS_FN[$fName]}" ] && fName="${LUM_ALIAS_FN[$fName]}"
   
-  local flags="${LUM_FN_FLAGS[$fName]:-0}" 
+  local -i flags="${LUM_FN_FLAGS[$fName]:-0}" 
   local usageTags _tk="$want|$fName" _ak="$want|*"
   local wantTags="${LUM_FN_HELP_TAGS[$_tk]:-${LUM_FN_HELP_TAGS[$_ak]}}"
 
@@ -39,16 +41,22 @@ lum::help() {
     usageTags="${LUM_FN_HELP_TAGS[$_tk]:-${LUM_FN_HELP_TAGS[$_ak]}}"
   fi
 
-  if lum::flag::is $flags 1; then
-    prefind="${LUM_HELP_START_MARKER} $fName"
-  else
-    prefind="lum::fn $fName"
-  fi
-
   if [ -n "${LUM_FN_ALIAS[$fName]}" ]; then
     dName="${LUM_FN_ALIAS[$fName]} "
   elif lum::flag::not $flags 1; then
     dName="$fName "
+  fi
+
+  if lum::flag::is $flags $DF; then
+    sName="$dName"
+  else
+    sName="$fName"
+  fi
+
+  if lum::flag::is $flags $SF; then
+    prefind="${LUM_HELP_START_MARKER} $sName"
+  else
+    prefind="lum::fn $fName"
   fi
 
   LFILE="${LUM_FN_FILES[$fName]}"
@@ -71,13 +79,13 @@ lum::help() {
 
   if [ "$want" = 2 ]; then
     ((S+=2))
-    sed -n "${S}{s/^#//;p}" "$LFILE" | lum::help::tmpl 5
+    sed -n "${S}{s/^#//;p}" "$LFILE" | lum::help::tmpl $wantTags
     return 0
   fi
 
   if [ "$want" = 0 ]; then
     if lum::flag::is $flags 2; then 
-      suffind="${LUM_HELP_END_MARKER} $fName"
+      suffind="${LUM_HELP_END_MARKER} $sName"
     else 
       suffind="${fName}()"
     fi

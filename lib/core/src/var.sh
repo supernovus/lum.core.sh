@@ -50,3 +50,30 @@ lum::var::has() {
   done
   return 1
 }
+
+lum::fn lum::var::debug
+#$ <<varname>> <<minval>> [[message...]]
+#
+# Debugging based on global variables.
+#
+# This is used to both set the debugging value, and
+# to display messages if the value of the variable is >=
+# the specified minimum value.
+#
+# Creating app-specific functions that supply the variable name
+# is highly recommended to make this the most useful.
+#
+# ((varname))     The name of the global integer variable.
+#
+# ((minval))      The minimum integer value to display the message.
+#
+# ((message))     If used, the message to show if ``$varname >= $minval``;
+#                 If not specified, then we set ``varname=$minval``;
+#
+lum::var::debug() {
+  [ $# -lt 2 ] lum::help::usage
+  local -n echoVar="$1"
+  local -i wantVal="$2"
+  shift; shift;
+  [ $echoVal -ge $wantVal ] && echo "$@"
+}

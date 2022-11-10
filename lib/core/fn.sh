@@ -61,6 +61,9 @@ lum::fn lum::fn.flags 2
 # ``2``    The help text must end with a `{#: funcname}` line.
 #        Useful for documenting topics without an actual function.
 #        If not set, the help text ends at the function declaration.
+# ``4``    Use the primary alias instead of ``funcname``.
+#        If there is no primary alias, this is ignored.
+#        If neither flags ``1`` or ``2`` are set, this is ignored.
 #
 #: lum::fn.flags
 
