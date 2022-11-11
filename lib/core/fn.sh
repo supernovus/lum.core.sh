@@ -27,16 +27,16 @@ lum::fn() {
   LUM_FN_FILES[$fName]="$caller"
   LUM_FN_FLAGS[$fName]="$fOpts"
   if [ $# -gt 2 ]; then
-    shift; shift;
+    shift 2
     while [ $# -gt 0 ]; do
       case "$1" in 
         -a)
           lum::fn::alias "$fName" "$2" "$3" "$4"
-          shift; shift; shift; shift;
+          shift 4
         ;;
         -t)
           lum::fn::helpTags "$fName" "$2" "$3"
-          shift; shift; shift;
+          shift 3
         ;;
         *)
           echo "unrecognized lum::fn argument '$1'" >&2
@@ -139,7 +139,7 @@ lum::fn::helpTags() {
   while [ $# -gt 0 ]; do
     key="$1|$name"
     LUM_FN_HELP_TAGS[$key]="$2"
-    shift; shift;
+    shift 2
   done
 }
 
@@ -161,16 +161,16 @@ lum::fn lum::fn::run
 lum::fn::run() {
   [ $# -lt 2 ] && lum::help::usage
   local mode="$1" fname aname cmd
-  shift;
+  shift
 
   if [ "$mode" = "2" ]; then
     [ $# -lt 2 ] && lum::help::usage
     lum::var::has "$1" "$2" || lum::fn::run-err "$2"
     fname="$2"
-    shift; shift;
+    shift 2
   else
     fname="$1"
-    shift;
+    shift
   fi
 
   aname="${LUM_ALIAS_FN[$fname]}"

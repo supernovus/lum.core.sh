@@ -173,33 +173,31 @@ lum::fn lum::help::tmpl
 #$ <<tags>>
 #
 # Parse ``STDIN`` for help document tags.
-#
-# If a theme is loaded, and the terminal supports it,
-# the help text will have fancy colours to make it easier
-# to read.
+# Uses loaded theme colours when supported by the terminal.
 #
 # ((tags))  Bitwise flags for what tags to allow.
-#       ``1``  = Syntax `{`\\{ }\\`}` and pad `{@\\int()}` tags.
-#       ``2``  = Arguments `{<\\< >\\>}` and options `{[\\[ ]\\]}` tags.
-#       ``4``  = Parameter `{(\\( )\\)}` and value `{`\\` `\\`}` tags.
-#       ``8``  = Extension tags: `{@\\>pipeCmd}`, `{@\\<passCmd}`
-#
+#       See ``lum::help::tmpl.tags`` for details.
+# 
 lum::help::tmpl() {
   local tags="${1:-0}"
-  local SYN=1 ARG=2 VAL=4 EXT=8
+  local SYN=1 ARG=2 VAL=4 VAR=8 EXT=16
 
   local argPattern='(.*?)<<(\w+)(\.\.\.)?>>(.*)'
   local optPattern='(.*?)\[\[(\w+)(=)?(\w+)?(\.\.\.)?\]\](.*)'
   local parPattern='(.*?)\(\((.*?)\)\)(.*?)'
   local synPattern='(.*?)`\{(.*?)\}`(.*)'
   local valPattern='(.*?)``(.*?)``(.*)'
+  local varPattern='(.*?)\$\{(\w+)\}(.*)'
   local extPattern='(.*?)@([<>])(\S+?);(.*)'
   local padPattern='(.*?)@(\d+)\((.*?)\)(.*)'
+  local bldPattern='(.*?)\*\*(.*?)\*\*(.*)'
   local escPattern='(.*?)\\\\(.*)'
+  local bsePattern='(.*?)\\\/\/\\(.*)'
 
-  local text="$(cat -)" before after arg eq def param rep
+  local text="$(cat -)" before after arg eq def param rep bs='\\'
 
-  local bc="${LUM_THEME[help.syntax]}"
+  local bc="${LUM_THEME[help.bold]}"
+  local sc="${LUM_THEME[help.syntax]}"
   local ac="${LUM_THEME[help.arg]}"
   local oc="${LUM_THEME[help.opt]}"
   local dc="${LUM_THEME[help.def]}"
@@ -225,13 +223,22 @@ lum::help::tmpl() {
     done
   fi
 
+  if lum::flag::is $tags $VAR; then
+    while [[ $text =~ $varPattern ]]; do
+      before="${BASH_REMATCH[1]}"
+      after="${BASH_REMATCH[3]}"
+      param="${!BASH_REMATCH[2]}"
+      text="$before$param$after"
+    done
+  fi
+
   if lum::flag::is $tags $ARG; then
     while [[ $text =~ $argPattern ]]; do 
       before="${BASH_REMATCH[1]}"
       after="${BASH_REMATCH[4]}"
       arg="${BASH_REMATCH[2]}"
       rep="${BASH_REMATCH[3]}"
-      param="$bc<$ac$arg$bc"
+      param="$sc<$ac$arg$sc"
       [ -n "$rep" ] && param="$param$rep"
       param="$param>$ec"
       text="$before$param$after"
@@ -244,8 +251,8 @@ lum::help::tmpl() {
       eq="${BASH_REMATCH[3]}"
       def="${BASH_REMATCH[4]}"
       rep="${BASH_REMATCH[5]}"
-      param="$bc[$oc$arg$bc"
-      [ "$eq" = "=" -a -n "$def" ] && param="$param$eq$dc$def$bc"
+      param="$sc[$oc$arg$sc"
+      [ "$eq" = "=" -a -n "$def" ] && param="$param$eq$dc$def$sc"
       [ -n "$rep" ] && param="$param$rep"
       param="$param]$ec"
       text="$before$param$after"
@@ -275,6 +282,14 @@ lum::help::tmpl() {
       before="${BASH_REMATCH[1]}"
       after="${BASH_REMATCH[3]}"
       arg="${BASH_REMATCH[2]}"
+      param="$sc$arg$ec"
+      text="$before$param$after"
+    done
+
+    while [[ $text =~ $bldPattern ]]; do 
+      before="${BASH_REMATCH[1]}"
+      after="${BASH_REMATCH[3]}"
+      arg="${BASH_REMATCH[2]}"
       param="$bc$arg$ec"
       text="$before$param$after"
     done
@@ -293,10 +308,46 @@ lum::help::tmpl() {
       after="${BASH_REMATCH[2]}"
       text="$before$after"
     done
+
+    while [[ $text =~ $bsePattern ]]; do
+      before="${BASH_REMATCH[1]}"
+      after="${BASH_REMATCH[2]}"
+      text="$before$bs$after"
+    done
   fi
 
   echo "$text"
 }
+
+lum::fn lum::help::tmpl.tags 2
+#$ `{int}`
+#
+# The ((flags)) argument of ``lum::help::tmpl``
+#
+# ``1``  = Enable `{`\\{ Misc syntax }\\`}`, `{*\\* bold text *\\*}`, 
+#        and `{@\\int(pad text)}` tags. Enables `{\//\}` escapes.
+# ``2``  = Enable `{<\\< argument >\\>}` and `{[\\[ option ]\\]}` tags.
+# ``4``  = Enable `{(\\( parameter )\\)}` and `{`\\` value `\\`}` tags.
+# ``8``  = Enable `{$\\{variable}\\}` tags.
+# ``16`` = Enable `{@\\>pipeCmd;}` and `{@\\<passCmd;}` extension tags.
+#        See ``lum::help::tmpl.exts`` for details.
+#
+#: lum::help::tmpl.tags
+
+lum::fn lum::help::tmpl.exts 2
+#$ `{...}`
+#
+# Extension tags for ``lum::help::tmpl``
+#
+# **@\\>cmd;**  Template is piped (``STDIN``) to the ``cmd`` function,
+#         which is passed ((tags)) as its only argument.
+#
+# **@\\<cmd;**  The ``cmd`` function is passed ((tags)) and then the template
+#         text as two separate arguments.
+#
+# In both cases, the output (``STDOUT``) will be the new template text.
+#
+#: lum::help::tmpl.exts
 
 lum::fn lum::help::list
 #$ <list> [pad=20] [sep] [prefix] [suffix]

@@ -12,6 +12,7 @@ LUM_THEME[diag.func]=$(lum::colour yellow)
 LUM_THEME[diag.file]=$(lum::colour blue)
 LUM_THEME[diag.line]=$(lum::colour light black)
 
+LUM_THEME[help.bold]=$(lum::colour bold)
 LUM_THEME[help.syntax]=$(lum::colour light black)
 LUM_THEME[help.arg]=$(lum::colour bold blue)
 LUM_THEME[help.opt]=$(lum::colour dark cyan)

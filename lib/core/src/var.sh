@@ -74,6 +74,6 @@ lum::var::debug() {
   [ $# -lt 2 ] lum::help::usage
   local -n echoVar="$1"
   local -i wantVal="$2"
-  shift; shift;
+  shift 2
   [ $echoVal -ge $wantVal ] && echo "$@"
 }

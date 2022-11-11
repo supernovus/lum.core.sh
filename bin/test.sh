@@ -5,14 +5,14 @@ LUM_USAGE_TITLE="Usage: "
 
 . $LUM_CORE_BIN_DIR/../lib/core.sh
 
-lum::use lum::themes::default lum::tmpl
+lum::use lum::themes::default lum::tmpl lum::args
 
 declare -a LUM_TEST_CMDS
 
-lum::fn lum::test-usage 2 -t 0 8 -a $SCRIPTNAME 1 0
+lum::fn lum::test-usage 2 -t 0 24 -a $SCRIPTNAME 1 0
 #$ <<command>> `{...}` 
 #
-#Commands:
+#Commands for ${SCRIPTNAME}:
 #@>lum::tmpl;
 #{{lum::test::list}}
 #
