@@ -21,11 +21,11 @@ lum::fn lum::help
 #
 lum::help() {
   [ $# -lt 1 ] && lum::help::usage
-  local prefind suffind dName sName fName="$1" S E output
+  local prefind suffind dName fName="$1" S E output
   local -i want=${2:-0}
   local err="${LUM_THEME[error]}"
   local end="${LUM_THEME[end]}"
-  local -i SF=1 EF=2 DF=4
+  local -i SF=1 EF=2
 
   [ -n "${LUM_ALIAS_FN[$fName]}" ] && fName="${LUM_ALIAS_FN[$fName]}"
   
@@ -47,14 +47,8 @@ lum::help() {
     dName="$fName "
   fi
 
-  if lum::flag::is $flags $DF; then
-    sName="$dName"
-  else
-    sName="$fName"
-  fi
-
   if lum::flag::is $flags $SF; then
-    prefind="${LUM_HELP_START_MARKER} $sName"
+    prefind="${LUM_HELP_START_MARKER} $fName"
   else
     prefind="lum::fn $fName"
   fi
@@ -85,7 +79,7 @@ lum::help() {
 
   if [ "$want" = 0 ]; then
     if lum::flag::is $flags 2; then 
-      suffind="${LUM_HELP_END_MARKER} $sName"
+      suffind="${LUM_HELP_END_MARKER} $fName"
     else 
       suffind="${fName}()"
     fi

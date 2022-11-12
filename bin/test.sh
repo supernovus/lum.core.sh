@@ -5,7 +5,7 @@ LUM_USAGE_TITLE="Usage: "
 
 . $LUM_CORE_BIN_DIR/../lib/core.sh
 
-lum::use lum::themes::default lum::tmpl lum::args
+lum::use lum::themes::default lum::tmpl lum::args lum::user
 
 declare -a LUM_TEST_CMDS
 
@@ -20,6 +20,7 @@ lum::fn lum::test-usage 2 -t 0 24 -a $SCRIPTNAME 1 0
 
 lum::fn::alias lum::help --help 1 LUM_TEST_CMDS
 lum::fn::alias lum::help help
+lum::fn::alias lum::user::conf --userconf 0 LUM_TEST_CMDS
 
 lum::fn lum::test::list 0 -a --list 1 LUM_TEST_CMDS -a list 0 0
 #$ [[prefix]]

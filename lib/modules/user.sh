@@ -7,6 +7,21 @@ lum::use lum::use::from
 
 lum::lib lum::user $LUM_CORE
 
+lum::fn lum::user::appDir 0 -t 0 13
+#$ <<dirname>>
+#
+# Set the app-specific user config sub-directory.
+#
+# This is a sub-directory in the user's home directory that
+# can contain configuration files specific to the app.
+# 
+# This is currently set to ``${LUM_USER_CONF_DIR}``
+#
+lum::user::appDir() {
+  [ $# -eq 0 ] && lum::help::usage
+  LUM_USER_CONF_DIR="$1"
+}
+
 lum::fn lum::user::home 
 #$ `{--}`
 #
@@ -25,13 +40,17 @@ lum::user::home() {
 }
 
 lum::fn lum::user::conf 
-#$ `{--}`
+#$ [[scriptDir=0]]
 #
 # Get the logged in user's config directory.
 #
+# ((scriptDir))    If ``1``, use script-specific config dir.
+#              
 lum::user::conf() {
-  local HOMEDIR="$(lum::user::home)"
-  echo "$HOMEDIR/$LUM_USER_CONF_DIR"
+  local scriptDir="${1:-0}" homeDir="$(lum::user::home)" 
+  local confDir="$homeDir/$LUM_USER_CONF_DIR"
+  [ "$scriptDir" = "1" ] && confDir+="/$SCRIPTNAME"
+  echo "$confDir"
 }
 
 lum::fn lum::user::libs 

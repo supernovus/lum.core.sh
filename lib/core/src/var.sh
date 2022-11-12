@@ -71,9 +71,9 @@ lum::fn lum::var::debug
 #                 If not specified, then we set ``varname=$minval``;
 #
 lum::var::debug() {
-  [ $# -lt 2 ] lum::help::usage
+  [ $# -lt 2 ] && lum::help::usage
   local -n echoVar="$1"
   local -i wantVal="$2"
   shift 2
-  [ $echoVal -ge $wantVal ] && echo "$@"
+  [ "$echoVar" -ge $wantVal ] && echo "$@"
 }

@@ -4,6 +4,7 @@
 
 declare -ga LUM_LIB_DIRS
 declare -ga LUM_CONF_DIRS
+declare -ga LUM_CONF_ALIASES
 declare -gA LUM_USE_NAMES
 declare -gA LUM_USE_FILES
 declare -gA LUM_LIB_PREFIX_DIR
@@ -36,21 +37,22 @@ lum::use() {
       useConf=0
     else
       cacheKey="$useConf:$1"
-      [ "${LUM_USE_NAMES[$cacheKey]}" = "1" ] && continue
+      #echo "use($cacheKey) = ${LUM_USE_NAMES[$cacheKey]}" >&2
+      [ "${LUM_USE_NAMES[$cacheKey]}" = "1" ] && shift && continue
       if [ $useConf -eq 1 ]; then
         findFile="${1//::/\/}"
         libFile="$(lum::use::find $1.conf ${LUM_CONF_DIRS[@]})"
       else
-        [ -n "${LUM_LIB_VER[$1]}" ] && continue
+        [ -n "${LUM_LIB_VER[$1]}" ] && shift && continue
         libFile="$(lum::use::findPrefixed $1.sh)"
         if [ $? -ne 0 ]; then
           libFile="$(lum::use::find ${1//::/\/}.sh ${LUM_LIB_DIRS[@]})"
         fi
       fi
 
-      [ "${LUM_USE_FILES[$libFile]}" = "1" ] && continue
+      [ "${LUM_USE_FILES[$libFile]}" = "1" ] && shift && continue
       if [ -f "$libFile" ]; then 
-        . "$libFile"
+        [ $useConf -eq 1 ] && lum::use::-conf "$libFile" || . "$libFile"
         LUM_USE_NAMES[$cacheKey]=1
         LUM_USE_FILES[$libFile]=1
       elif [ $isFatal -eq 1 ]; then
@@ -59,6 +61,30 @@ lum::use() {
       fi
     fi
     shift
+  done
+}
+
+lum::fn lum::use::-conf
+#$ <<filename>>
+#
+# Internal method to load a config file
+#
+# Used by ``lum::use`` to load config files.
+# Supports config-specific function aliases.
+# Any alias in the ``LUM_CONF_ALIASES`` list will be
+# made available for use in config files.
+#
+lum::use::-conf() {
+  [ $# -eq 0 ] && lum::help::usage
+  local conf="$1" A F
+  for A in "${LUM_CONF_ALIASES[@]}"; do
+    lum::fn::is "$A" && echo "function '$F' already exists" && exit $LUM_USE_ERRCODE 
+    F="${LUM_ALIAS_FN[$A]}"
+    [ -n "$F" ] && lum::fn::copy "$F" "$A" 
+  done
+  . "$conf"
+  for A in "${LUM_CONF_ALIASES[@]}"; do
+    unset "$A"
   done
 }
 

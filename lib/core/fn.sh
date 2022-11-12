@@ -5,8 +5,9 @@ declare -gA LUM_FN_ALIAS
 declare -gA LUM_FN_FLAGS
 declare -gA LUM_FN_HELP_TAGS
 declare -gA LUM_ALIAS_FN
+declare -gA LUM_ALIAS_GROUPS
 
-#$ lum::fn <<name>> [[flags=0]] `{...}`
+#$ lum::fn `{opts...}` <<name>> [[flags=0]] `{defs...}`
 #
 # Register a library function (or help topic).
 #
@@ -18,12 +19,18 @@ declare -gA LUM_ALIAS_FN
 # ((flags))      Bitwise flags that modify the definition.
 #            See ``lum::fn.flags`` for details.
 # 
-# Any arguments beyond the above are special named options.
-# See ``lum::fn.named`` for details.
+# For ((opts)) preceeding the main arguments, see: ``lum::fn.opts``
+# For ((defs)) following the main arguments, see: ``lum::fn.defs``
 #
 lum::fn() {
   [ $# -lt 1 ] && lum::help::usage
-  local caller="${BASH_SOURCE[1]}" fName="$1" fOpts="${2:-0}" 
+  local -i callBack=1
+  if [ "$1" = "-C" -a $# -ge 3 ]; then
+    callBack=$2
+    shift 2
+  fi
+
+  local caller="${BASH_SOURCE[$callBack]}" fName="$1" fOpts="${2:-0}"
   LUM_FN_FILES[$fName]="$caller"
   LUM_FN_FLAGS[$fName]="$fOpts"
   if [ $# -gt 2 ]; then
@@ -33,6 +40,10 @@ lum::fn() {
         -a)
           lum::fn::alias "$fName" "$2" "$3" "$4"
           shift 4
+        ;;
+        -A)
+          lum::fn::alias "$fName" "$2" "$3"
+          shift 3
         ;;
         -t)
           lum::fn::helpTags "$fName" "$2" "$3"
@@ -49,40 +60,6 @@ lum::fn() {
 }
 lum::fn lum::fn 1
 
-lum::fn lum::fn.flags 2
-#$ `{int}`
-#
-# Bitwise flags modifying function/help behaviour.
-#
-# ``1``    The help text must start with an extended usage line,
-#        including the officially registered function name.
-#        If not set, the help text starts at the line below the 
-#        ``lum::fn`` call registering the function.
-# ``2``    The help text must end with a `{#: funcname}` line.
-#        Useful for documenting topics without an actual function.
-#        If not set, the help text ends at the function declaration.
-# ``4``    Use the primary alias instead of ``funcname``.
-#        If there is no primary alias, this is ignored.
-#        If neither flags ``1`` or ``2`` are set, this is ignored.
-#
-#: lum::fn.flags
-
-lum::fn lum::fn.named 2
-#$ `{*}`
-#
-# Named options for the ``lum::fn`` function.
-#
-# Each of these has a specific number of arguments that MUST be passed.
-# You can specify as many options as you like, as long as the argument
-# count is correct. Below we'll list the mandatory argument count, and
-# the target function that will be called with the arguments. The ``F``
-# symbol refers to the ((funcname)) parameter.
-#
-# ((-a))   `{(3)}` → ``lum::fn::alias F ...``
-# ((-t))   `{(2)}` → ``lum::fn::helpTags F ...``
-#
-#: lum::fn.named
-
 lum::fn lum::fn::alias
 #$ <<funcname>> <<alias>> [[opts=0]] [[list=0]]
 #
@@ -95,23 +72,55 @@ lum::fn lum::fn::alias
 #
 # ((alias))      The alias name (e.g. ``--cool``).
 #
-# ((opts))       Options as bitwise flags.
+# ((opts))       Options for the alias definition (as bitwise flags).
 #            ``1`` = This is the primary name shown in the help/usage text.
+#                  Will not overwrite an existing primary by default.
+#            ``2`` = If flag ``1`` is set, this will allow overwriting.
+#
+#            This may also be the name of an alias group, in which case
+#            the real ((opts)) and ((list)) will be obtained from there.
 #
 # ((list))       The name of a command list to add the alias to.
 #            It must be a valid global variable name, and it must be
 #            declared as a flat array (``-a``) variable.
 #            If set as ``0`` this is skipped.
-#
+# 
 lum::fn::alias() {
   [ $# -lt 2 ] && lum::help::usage
   local fName="$1" aName="$2" opts="${3:-0}" listname="${4:-0}"
+  local PRI=1 OVWR=2
   LUM_ALIAS_FN[$aName]="$fName"
-  lum::flag::is $opts 1 && LUM_FN_ALIAS[$fName]="$aName"
+
+  if [ "$listname" = 0 -a -n "${LUM_ALIAS_GROUPS[$opts]}" ]; then
+    local -a group=(${LUM_ALIAS_GROUPS[$opts]})
+    opts=${group[0]}
+    listname="${group[1]}"
+  fi
+
   if [ -n "$listname" -a "$listname" != "0" ]; then 
     local -n list="$listname"
     list+=($aName)
   fi
+
+  if lum::flag::is $opts $PRI; then 
+    [ -n "${LUM_FN_ALIAS[$fName]}" ] && lum::flag::not $opts $OVWR && return
+    LUM_FN_ALIAS[$fName]="$aName"
+  fi
+}
+
+lum::fn lum::fn::alias::group 
+#$ <<name>> <<opts>> <<list>>
+#
+# Create an alias group with set options and a list.
+#
+# ((name))      The name of the group to create.
+# ((opts))      The options as an integer of bitwise flags.
+# ((list))      The name of a list to add the alias to.
+#
+lum::fn::alias::group() {
+  [ $# -ne 3 ] && lum::help::usage
+  local name="$1" opts="${2:-0}" list="${3:-0}"
+  LUM_ALIAS_GROUPS[$name]="$opts $list"
 }
 
 lum::fn lum::fn::helpTags
@@ -235,3 +244,47 @@ lum::fn::is() {
   declare -F "$1" >/dev/null
 }
 
+### Extra documentation
+
+lum::fn lum::fn.flags 2
+#$ `{int}`
+#
+# Bitwise flags modifying function/help behaviour.
+#
+# ``1``    The help text must start with an extended usage line,
+#        including the officially registered function name.
+#        If not set, the help text starts at the line below the 
+#        ``lum::fn`` call registering the function.
+# ``2``    The help text must end with a `{#: funcname}` line.
+#        Useful for documenting topics without an actual function.
+#        If not set, the help text ends at the function declaration.
+#
+#: lum::fn.flags
+
+lum::fn lum::fn.defs 2
+#$ `{*}`
+#
+# Extra definition options for the ``lum::fn`` function.
+#
+# Each of these has a specific number of arguments that MUST be passed.
+# You can specify as many options as you like, as long as the argument
+# count is correct. Below we'll list the mandatory argument count, and
+# the target function that will be called with the arguments. The ``F``
+# symbol refers to the ((funcname)) parameter.
+#
+# ((-a))   `{(3)}` → ``lum::fn::alias F aname opts list``
+# ((-A))   `{(2)}` → ``lum::fn::alias F aname group``
+# ((-t))   `{(2)}` → ``lum::fn::helpTags F mode tags``
+#
+#: lum::fn.defs
+
+lum::fn lum::fn.opts 2 -t 0 7
+#$ `{*}`
+#
+# Options to change function definition settings.
+#
+# ((-C)) <<int>>    The number of call back levels to find the
+#             file with the actual function definition.
+#             Default is ``1`` if not specified.
+#
+#: lum::fn.opts
