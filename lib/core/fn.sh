@@ -164,6 +164,8 @@ lum::fn lum::fn::run
 #             No additional arguments.
 #       ``2`` = Only names in a specified list.
 #             <<listname>>  - The list of names.
+#       ``3`` = Functions with a specific prefix.
+#             <<prefix>>    - The prefix.
 #             
 # ((name))  The function name or an alias to the function.
 #
@@ -172,15 +174,24 @@ lum::fn::run() {
   local mode="$1" fname aname cmd
   shift
 
-  if [ "$mode" = "2" ]; then
-    [ $# -lt 2 ] && lum::help::usage
-    lum::var::has "$1" "$2" || lum::fn::run-err "$2"
-    fname="$2"
-    shift 2
-  else
-    fname="$1"
-    shift
-  fi
+  case "$mode" in
+    2)
+      [ $# -lt 2 ] && lum::help::usage
+      lum::var::has "$1" "$2" || lum::fn::run-err "$2"
+      fname="$2"
+      shift 2
+    ;;
+    3)
+      [ $# -lt 2 ] && lum::help::usage
+      fname="$2"
+      cmd="$1$2"
+      shift 2
+    ;;
+    *)
+      fname="$1"
+      shift
+    ;;
+  esac
 
   aname="${LUM_ALIAS_FN[$fname]}"
 
