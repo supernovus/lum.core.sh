@@ -50,8 +50,8 @@ lum::use() {
         fi
       fi
 
-      [ "${LUM_USE_FILES[$libFile]}" = "1" ] && shift && continue
-      if [ -f "$libFile" ]; then 
+      if [ -n "$libFile" -a -f "$libFile" ]; then 
+        [ "${LUM_USE_FILES[$libFile]}" = "1" ] && shift && continue
         [ $useConf -eq 1 ] && lum::use::-conf "$libFile" || . "$libFile"
         LUM_USE_NAMES[$cacheKey]=1
         LUM_USE_FILES[$libFile]=1

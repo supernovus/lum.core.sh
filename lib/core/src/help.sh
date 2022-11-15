@@ -1,6 +1,7 @@
 ## help def
 
 [ -z "$LUM_USAGE_TITLE" ] && LUM_USAGE_TITLE="usage: "
+[ -z "$LUM_USAGE_MORE_INFO" ] && LUM_USAGE_MORE_INFO=1
 [ -z "$LUM_USAGE_STACK" ] && LUM_USAGE_STACK=0
 
 declare -gr LUM_HELP_START_MARKER="#$"
@@ -158,6 +159,8 @@ lum::help::usage() {
     echo "$want" >&2
     if [ "$LUM_USAGE_STACK" != "0" ]; then 
       lum::help::diag $DL >&2
+    elif [ "$LUM_USAGE_MORE_INFO" != "0" ]; then
+      lum::help::moreinfo >&2
     fi
   fi
   [ $errCode -ne -1 ] && exit $errCode
@@ -375,4 +378,13 @@ lum::help::list() {
     U="$(lum::help $K 2)"
     echo "$ic$C$sc$sep$ec$U"
   done
+}
+
+lum::help::moreinfo() {
+  local vc="${LUM_THEME[help.value]}"
+  local ac="${LUM_THEME[help.arg]}"
+  local sc="${LUM_THEME[help.syntax]}"
+  local ec="${LUM_THEME[end]}"
+
+  echo "For command help info: ${vc}help$ec ${sc}<${ac}command${sc}>$ec"
 }
