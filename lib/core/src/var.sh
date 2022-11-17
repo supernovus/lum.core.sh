@@ -20,6 +20,25 @@ lum::var::not() {
   [ -z "${!1}" ]
 }
 
+lum::fn lum::var::type
+#$ <<varname>>
+#
+# Echo the type value to ``STDOUT``.
+#
+# ``--``    A regular variable.
+# ``-i``    An integer variable.
+# ``-a``    An array variable.
+# ``-A``    An associative array variable.
+# ``-n``    A link to another variable.
+# 
+# Any other types supported by ``declare`` may be returned.
+# If the variable has not been declared, the output will be empty.
+#
+lum::var::type() {
+  [ $# -eq 0 ] && lum::help::usage
+  declare -p "$1" 2>/dev/null | cut -d' ' -f2
+}
+
 lum::fn lum::var::need
 #$ <<varname>>
 #
@@ -72,8 +91,15 @@ lum::fn lum::var::debug
 #
 lum::var::debug() {
   [ $# -lt 2 ] && lum::help::usage
-  local -n echoVar="$1"
-  local -i wantVal="$2"
+  local -n debugVar="$1"
+  local -i debugVal="$2"
   shift 2
-  [ "$echoVar" -ge $wantVal ] && echo "$@"
+  if [ $# -eq 0 ]; then
+    debugVar="$debugVal"
+  elif [ "$debugVar" -ge $debugVal ]; then 
+    echo "$@"
+  else
+    return 1
+  fi
+  return 0
 }
