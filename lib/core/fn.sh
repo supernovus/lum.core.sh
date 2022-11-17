@@ -6,6 +6,7 @@ declare -gA LUM_FN_FLAGS
 declare -gA LUM_FN_HELP_TAGS
 declare -gA LUM_ALIAS_FN
 declare -gA LUM_ALIAS_GROUPS
+declare -gi LUM_FN_DEBUG
 
 #$ lum::fn `{opts...}` <<name>> [[flags=0]] `{defs...}`
 #
@@ -233,6 +234,26 @@ lum::fn::copy() {
   [ $# -ne 2 ] && lum::help::usage
   test -n "$(declare -f "$1")" || return 
   eval "${_/$1/$2}"
+}
+
+lum::fn lum::fn::make
+#$ <<name>> <<body...>>
+#
+# Build a dynamic function.
+#
+# ((name))        The name of the function to create.
+#
+# ((body))        The commands to run in the function.
+#             Special characters such as ``$``, ``"``, etc. must be escaped
+#             using ``\`` in order to be included as a part of the command.
+#
+lum::fn::make() {
+  [ $# -lt 2 ] && lum::help::usage
+  local -a func=('function' "$1()" '{')
+  shift
+  func+=("$@" ';' '}')
+  lum::var::debug LUM_FN_DEBUG 1 "lum::fn::make ${func[@]}"
+  eval "${func[@]}"
 }
 
 lum::fn lum::fn::list

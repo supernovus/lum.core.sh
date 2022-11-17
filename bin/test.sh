@@ -2,10 +2,12 @@
 
 LUM_CORE_BIN_DIR="$(dirname $0)"
 LUM_USAGE_TITLE="Usage: "
+LUM_USAGE_STACK=1
 
 . $LUM_CORE_BIN_DIR/../lib/core.sh
 
-lum::use lum::themes::default lum::tmpl lum::args lum::user
+lum::use lum::themes::default 
+lum::use lum::tmpl lum::args lum::getopts lum::user
 
 declare -a LUM_TEST_CMDS
 
