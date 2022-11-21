@@ -1,4 +1,5 @@
-## core lum::flag
+#@lib: lum::core /flag
+#@desc: Bitwise flag functions
 
 lum::fn lum::flag::is
 #$ <<bitvalue1>> <<bitvalue2>>
@@ -39,7 +40,7 @@ lum::fn lum::flag::set
 #
 lum::flag::set() {
   [ $# -lt 1 ] && lum::help::usage
-  local retval=0 testval
+  local -i retval=0 testval
   while [ $# -gt 0 ]; do
     testval=$1
     shift

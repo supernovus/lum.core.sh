@@ -1,8 +1,5 @@
-## lum::use::from extension
-
-[ -z "$LUM_CORE" ] && echo "lum::core not loaded" && exit 100
-
-lum::lib lum::use::from $LUM_CORE
+#@lib: lum::use::from
+#@func: 1
 
 lum::fn lum::use::from
 #$ <<path>>

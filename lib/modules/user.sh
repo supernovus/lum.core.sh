@@ -1,11 +1,9 @@
-## User related functions
+#@lib: lum::user
+#@desc: User information functions
 
-[ -z "$LUM_CORE" ] && echo "lum::core not loaded" && exit 100
 [ -z "$LUM_USER_CONF_DIR" ] && LUM_USER_CONF_DIR=".lum"
 
 lum::use lum::use::from
-
-lum::lib lum::user $LUM_CORE
 
 lum::fn lum::user::appDir 0 -t 0 13
 #$ <<dirname>>

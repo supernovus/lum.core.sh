@@ -1,8 +1,5 @@
-## Simple argument handling stuff
-
-[ -z "$LUM_CORE" ] && echo "lum::core not loaded" && exit 100
-
-lum::lib lum::args $LUM_CORE
+#@lib: lum::args
+#@desc: Argument related functions
 
 lum::fn lum::args::has 
 #$ <<want>> <<values...>>

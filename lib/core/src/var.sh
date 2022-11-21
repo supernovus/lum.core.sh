@@ -1,4 +1,5 @@
-## core lum::var
+#@lib: lum::core /var
+#@desc: Global variable related functions
 
 [ -z "$LUM_NEED_ERRCODE" ] && LUM_NEED_ERRCODE=199
 

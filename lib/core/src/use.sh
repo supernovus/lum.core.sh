@@ -1,4 +1,5 @@
-## use def
+#@lib lum::core /use
+#@desc Library module loading system
 
 [ -z "$LUM_USE_ERRCODE" ] && LUM_USE_ERRCODE=222
 
@@ -8,6 +9,8 @@ declare -ga LUM_CONF_ALIASES
 declare -gA LUM_USE_NAMES
 declare -gA LUM_USE_FILES
 declare -gA LUM_LIB_PREFIX_DIR
+
+lum::fn::alias::group CONF 0 LUM_CONF_ALIASES
 
 lum::fn lum::use
 #$ <<arguments...>>
@@ -43,7 +46,6 @@ lum::use() {
         findFile="${1//::/\/}"
         libFile="$(lum::use::find $1.conf ${LUM_CONF_DIRS[@]})"
       else
-        [ -n "${LUM_LIB_VER[$1]}" ] && shift && continue
         libFile="$(lum::use::findPrefixed $1.sh)"
         if [ $? -ne 0 ]; then
           libFile="$(lum::use::find ${1//::/\/}.sh ${LUM_LIB_DIRS[@]})"

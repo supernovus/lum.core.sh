@@ -1,29 +1,24 @@
-## lum::core bootstrap file
+#@lib: lum::core
+#@desc: Core library
 
-[ -z "$BASH_VERSION" ] && echo "Must use bash" && exit 150
-[ "$BASH_VERSINFO" -lt 4 ] && echo "Bash version 4 or higher required" && exit 150
+invalid_bash() {
+  echo "Must use Bash version 4.4 or higher"
+  exit 150
+}
 
-declare -gr SCRIPTNAME="$(basename $0)"                # Name of the script.
-declare -gr LUM_LIB_DIR="$(dirname ${BASH_SOURCE[0]})" # Core libs are here.
-declare -gr LUM_CORE=1.0.0                             # Core version.
+[ -z "${BASH_VERSION}" ] && invalid_bash
+[ "${BASH_VERSINFO[0]}" -lt 4 ] && invalid_bash
+[ "${BASH_VERSINFO[0]}" -eq 4 -a "${BASH_VERSINFO[1]}" -lt 4 ] && invalid_bash
 
-# The directory the core source files are in.
-LUM_LIBS="$LUM_LIB_DIR/core"
+declare -gr SCRIPTNAME="$(basename $0)"
+declare -gr LUM_LIB_DIR="$(dirname ${BASH_SOURCE[0]})"
+declare -gr LUM_CORE=1
 
-# The function definition functions are needed before all else.
-. "$LUM_LIBS/fn.sh"
+# The bootstrap functions are needed before all else.
+. "$LUM_LIB_DIR/core/bootstrap.sh"
 
-# Now load the rest of the core source files.
-for LUM_FILE in "$LUM_LIBS/src/"*.sh; do
-  . "$LUM_FILE"
-done
+# Load the rest of the core sub-modules.
+lum::use::load-subs "$LUM_LIB_DIR/core/src"
 
-# Run the setup commands.
-. "$LUM_LIBS/setup.sh"
-
-# Clean up temporary stuff
-unset LUM_LIBS LUM_FILE 
-
-# Register the core library.
-lum::lib lum::core $LUM_CORE
-
+## Add our module path.
+lum::use::libdir "$LUM_LIB_DIR/modules" lum::

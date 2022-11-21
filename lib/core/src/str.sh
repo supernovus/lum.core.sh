@@ -1,4 +1,5 @@
-## core lum::str
+#@lib: lum::core /str
+#@desc: String utilities
 
 lum::fn lum::str::pad
 #$ <<len>> <<string...>>

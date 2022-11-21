@@ -14,7 +14,11 @@ and [PHP](https://github.com/supernovus/lum.core.php).
 
 ## Requirements
 
-- Bash 4.0 or higher
+- Bash 4.4 or higher
+- GNU coreutils or busybox
+- sed
+- (g)awk
+- grep
 
 ## Author
 

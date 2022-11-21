@@ -1,11 +1,14 @@
-## help def
+#@lib: lum::core /help
+#@desc: A help system
 
 [ -z "$LUM_USAGE_TITLE" ] && LUM_USAGE_TITLE="usage: "
 [ -z "$LUM_USAGE_MORE_INFO" ] && LUM_USAGE_MORE_INFO=1
 [ -z "$LUM_USAGE_STACK" ] && LUM_USAGE_STACK=0
 
+declare -gr LUM_HELP_START_FN="lum::fn"
 declare -gr LUM_HELP_START_MARKER="#$"
 declare -gr LUM_HELP_END_MARKER="#:"
+
 declare -gA LUM_THEME
 
 lum::fn lum::help
@@ -51,7 +54,7 @@ lum::help() {
   if lum::flag::is $flags $SF; then
     prefind="${LUM_HELP_START_MARKER} $fName"
   else
-    prefind="lum::fn $fName"
+    prefind="$LUM_HELP_START_FN $fName"
   fi
 
   LFILE="${LUM_FN_FILES[$fName]}"
@@ -70,7 +73,7 @@ lum::help() {
     return 2
   fi
 
-  lum::flag::not $flags 1 && ((S++))
+  lum::flag::not $flags $SF && ((S++))
 
   if [ "$want" = 2 ]; then
     ((S+=2))
@@ -79,7 +82,7 @@ lum::help() {
   fi
 
   if [ "$want" = 0 ]; then
-    if lum::flag::is $flags 2; then 
+    if lum::flag::is $flags $EF; then 
       suffind="${LUM_HELP_END_MARKER} $fName"
     else 
       suffind="${fName}()"

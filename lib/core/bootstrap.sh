@@ -1,12 +1,64 @@
-## core lum::fn 
+#@lib: lum::core /bootstrap
+#@desc: Submodule defining functions required by everything else.
 
-declare -gA LUM_FN_FILES
-declare -gA LUM_FN_ALIAS
-declare -gA LUM_FN_FLAGS
-declare -gA LUM_FN_HELP_TAGS
-declare -gA LUM_ALIAS_FN
-declare -gA LUM_ALIAS_GROUPS
-declare -gi LUM_FN_DEBUG
+#$ lum::var `{...}`
+#
+# Declare global variables
+#
+# A wrapper for the ``declare`` statement for common library declarations.
+# Each command line argument may be an option, or a variable name to declare.
+#
+# Options:
+#
+# ``-A -a -i -r``      → Following variables will use this declare type.
+#
+# ``-P <<prefix>>``    → Following variables will be prefixed with this.
+#
+# ``-S <<suffix>>``    → Following variables will be suffixed with this.
+#
+# ``-n <<a>> <<t>>``   → Assign variable ((a)) as a link to variable ((t)).
+#              Uses current ((prefix)) and ((suffix)), but NOT ((flag)).
+# ``-i <<a>> <<v>>``   → Assign variable ((a)) with value ((v)).
+#              Uses current ((prefix)), ((suffix)), and ((flag)).
+#
+# Any other standalone value not recognized as one of the above options will
+# be declared as a variable with the ((prefix)), ((suffix)), and ((flag)).
+# No **value** will be assigned in the standalone declarations.
+#
+lum::var() {
+  local flag prefix suffix
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -A|-a|-i|-r)
+        flag="$1"
+        shift
+      ;;
+      -P)
+        prefix="$2"
+        shift 2
+      ;;
+      -S)
+        suffix="$2"
+        shift 2
+      ;;
+      -n)
+        declare -g -n "$prefix$2$suffix"="$3"
+        shift 3
+      ;;
+      -=)
+        declare -g $flag "$prefix$2$suffix"="$3"
+        shift 3
+      ;;
+      *)
+        declare -g $flag "$prefix$1$suffix"
+        shift
+      ;;
+    esac
+  done
+}
+
+lum::var -P LUM_FN_ -A FILES ALIAS FLAGS HELP_TAGS -i DEBUG
+lum::var -A -P LUM_ALIAS_ FN GROUPS
 
 #$ lum::fn `{opts...}` <<name>> [[flags=0]] `{defs...}`
 #
@@ -25,13 +77,20 @@ declare -gi LUM_FN_DEBUG
 #
 lum::fn() {
   [ $# -lt 1 ] && lum::help::usage
-  local -i callBack=1
-  if [ "$1" = "-C" -a $# -ge 3 ]; then
-    callBack=$2
+  local caller
+  if [ "$1" = "--from" -a $# -ge 3 ]; then
+    caller="$2"
     shift 2
+  else
+    local -i callBack=1
+    if [ "$1" = "-C" -a $# -ge 3 ]; then
+      callBack=$2
+      shift 2
+    fi
+    caller="${BASH_SOURCE[$callBack]}"
   fi
 
-  local caller="${BASH_SOURCE[$callBack]}" fName="$1" fOpts="${2:-0}"
+  local fName="$1" fOpts="${2:-0}"
   LUM_FN_FILES[$fName]="$caller"
   LUM_FN_FLAGS[$fName]="$fOpts"
   if [ $# -gt 2 ]; then
@@ -59,7 +118,9 @@ lum::fn() {
     done
   fi
 }
+
 lum::fn lum::fn 1
+lum::fn lum::var 1
 
 lum::fn lum::fn::alias
 #$ <<funcname>> <<alias>> [[opts=0]] [[list=0]]
@@ -153,127 +214,25 @@ lum::fn::helpTags() {
   done
 }
 
-lum::fn lum::fn::run
-#$ <<mode>> `{modeArgs...}` <<name>> `{funcArgs...}`
+lum::fn::helpTags '*' 0 5 1 3 2 0
+
+lum::fn lum::use::load-subs
+#$ [[path]]
 #
-# Call a function and pass it all other parameters.
+# Load all sub-modules from a folder.
 #
-# ((mode))  Determine which functions can be called.
-#       ``0`` = No restrictions (dangerous!)
-#             No additional arguments.
-#       ``1`` = Defined aliases only.
-#             No additional arguments.
-#       ``2`` = Only names in a specified list.
-#             <<listname>>  - The list of names.
-#       ``3`` = Functions with a specific prefix.
-#             <<prefix>>    - The prefix.
-#             
-# ((name))  The function name or an alias to the function.
+# ((path))     Optional path to load sub-modules from.
+#          If not specified, we take the calling filename,
+#          and add a ``.d`` to it, so ``./lib/foo.sh`` would 
+#          look for sub-modules in ``./lib/foo.sh.d/*.sh``.
 #
-lum::fn::run() {
-  [ $# -lt 2 ] && lum::help::usage
-  local mode="$1" fname aname cmd
-  shift
-
-  case "$mode" in
-    2)
-      [ $# -lt 2 ] && lum::help::usage
-      lum::var::has "$1" "$2" || lum::fn::run-err "$2"
-      fname="$2"
-      shift 2
-    ;;
-    3)
-      [ $# -lt 2 ] && lum::help::usage
-      fname="$2"
-      cmd="$1$2"
-      shift 2
-    ;;
-    *)
-      fname="$1"
-      shift
-    ;;
-  esac
-
-  aname="${LUM_ALIAS_FN[$fname]}"
-
-  case "$mode" in 
-    0|2)
-      [ -n "$aname" ] && cmd="$aname" || cmd="$fname"
-    ;;
-    1)
-      [ -n "$aname" ] && cmd="$aname" || lum::fn::run-err "$fname"
-    ;;
-  esac
-
-  if lum::fn::is "$cmd"; then
-    "$cmd" "$@"
-  else 
-    lum::fn::run-err "$fname"
+lum::use::load-subs() {
+  local subPath="${1:-${BASH_SOURCE[1]}.d}" subFile
+  if [ -d "$subPath" ]; then
+    for subFile in "$subPath/"*.sh; do
+      [ -f "$subFile" ] && . "$subFile"
+    done
   fi
-}
-
-## Private sub-function for lum::fn::run
-lum::fn::run-err() {
-  local err="${LUM_THEME[error]}" end="${LUM_THEME[end]}"
-  echo "Unrecognized command '$err$1$end' specified" >&2
-  exit 1
-}
-
-lum::fn lum::fn::copy
-#$ <<oldName>> <<newName>>
-#
-# Makes a copy of a function.
-#
-# ((oldName))  The existing function.
-# ((newName))  The name for the copy.
-#
-# Useful for making a backup of an existing function
-# before overriding it with a new version.
-#
-lum::fn::copy() {
-  [ $# -ne 2 ] && lum::help::usage
-  test -n "$(declare -f "$1")" || return 
-  eval "${_/$1/$2}"
-}
-
-lum::fn lum::fn::make
-#$ <<name>> <<body...>>
-#
-# Build a dynamic function.
-#
-# ((name))        The name of the function to create.
-#
-# ((body))        The commands to run in the function.
-#             Special characters such as ``$``, ``"``, etc. must be escaped
-#             using ``\`` in order to be included as a part of the command.
-#
-lum::fn::make() {
-  [ $# -lt 2 ] && lum::help::usage
-  local -a func=('function' "$1()" '{')
-  shift
-  func+=("$@" ';' '}')
-  lum::var::debug LUM_FN_DEBUG 1 "lum::fn::make ${func[@]}"
-  eval "${func[@]}"
-}
-
-lum::fn lum::fn::list
-#$ [[prefix]]
-#
-# Show a list of functions.
-#
-# ((prefix))  Show only functions starting with this.
-#
-lum::fn::list() {
-  compgen -A function "$1"
-}
-
-lum::fn lum::fn::is
-#$ <<name>>
-#
-# Test if a function exists
-#
-lum::fn::is() {
-  declare -F "$1" >/dev/null
 }
 
 ### Extra documentation
@@ -286,10 +245,11 @@ lum::fn lum::fn.flags 2
 # ``1``    The help text must start with an extended usage line,
 #        including the officially registered function name.
 #        If not set, the help text starts at the line below the 
-#        ``lum::fn`` call registering the function.
+#        call registering the function.
 # ``2``    The help text must end with a `{#: funcname}` line.
 #        Useful for documenting topics without an actual function.
 #        If not set, the help text ends at the function declaration.
+#        This flag is *always* enabled for library/sub-module help text.
 #
 #: lum::fn.flags
 
@@ -315,8 +275,10 @@ lum::fn lum::fn.opts 2 -t 0 7
 #
 # Options to change function definition settings.
 #
-# ((-C)) <<int>>    The number of call back levels to find the
-#             file with the actual function definition.
-#             Default is ``1`` if not specified.
+# ((-C))         <<int>>    The number of call back levels to find the
+#                     file with the actual function definition.
+#                     Default is ``1`` if not specified.
+# ((--from))     <<str>>    The path to the actual source file.
+#                     Obviously this overrules the ((-C)) option.
 #
 #: lum::fn.opts

@@ -1,6 +1,5 @@
-## Simple argument handling stuff
-
-[ -z "$LUM_CORE" ] && echo "lum::core not loaded" && exit 100
+#@lib: lum::getopts
+#@desc: A wrapper around getopts
 
 [ -z "$LUM_GETOPTS_ERR_INVALID_TYPE" ] && LUM_GETOPTS_ERR_INVALID_TYPE=170
 [ -z "$LUM_GETOPTS_ERR_INVALID_FLAG" ] && LUM_GETOPTS_ERR_INVALID_FLAG=171
@@ -8,8 +7,6 @@
 [ -z "$LUM_GETOPTS_ERR_FLAG_EXISTS"  ] && LUM_GETOPTS_ERR_FLAG_EXISTS=173
 [ -z "$LUM_GETOPTS_ERR_NAME_EXISTS"  ] && LUM_GETOPTS_ERR_NAME_EXISTS=174
 [ -z "$LUM_GETOPTS_ERR_INVALID_NAME" ] && LUM_GETOPTS_ERR_INVALID_NAME=175
-
-lum::lib lum::getopts $LUM_CORE
 
 lum::fn lum::getopts
 #$ <<id>> [[prefix]]

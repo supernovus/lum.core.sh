@@ -1,9 +1,7 @@
-## A helper for setting colours.
+#@lib: lum::colour
+#@desc: ANSI Colours for your terminal
 
-[ -z "$LUM_CORE" ] && echo "lum::core not loaded" && exit 100
 [ -z "$LUM_COLOUR_TEST" ] && LUM_COLOUR_TEST=1
-
-lum::lib lum::colour $LUM_CORE
 
 lum::fn lum::colour::isSupported
 #$ --

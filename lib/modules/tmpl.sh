@@ -1,8 +1,5 @@
-## Simple template engine for trusted code only
-
-[ -z "$LUM_CORE" ] && echo "lum::core not loaded" && exit 100
-
-lum::lib lum::tmpl $LUM_CORE
+#@lib: lum::tmpl
+#@desc: A cheap template engine
 
 declare -gA LUM_TMPL_VARS
 
