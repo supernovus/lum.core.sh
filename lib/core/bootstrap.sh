@@ -1,64 +1,63 @@
 #@lib: lum::core /bootstrap
 #@desc: Submodule defining functions required by everything else.
 
+### Proto-bootstrap functions
+
 #$ lum::var `{...}`
 #
 # Declare global variables
 #
-# A wrapper for the ``declare`` statement for common library declarations.
-# Each command line argument may be an option, or a variable name to declare.
+# Arguments may be modifiers which affect following arguments, or declarations
+# which register variables using the ``declare`` statement.
 #
-# Options:
+# **Modifier arguments:**
 #
-# ``-A -a -i -r``      → Following variables will use this declare type.
+# ``-A -a -i -r -n --``  → Following variables will use this declare type.
+#                        Default is ``--`` (regular variable).
+# ``-P <<prefix>>``        → Following variables will be prefixed with this.
+#                        A value of ``-`` or ``""`` will clear the prefix.
+# ``-S <<suffix>>``        → Following variables will be suffixed with this.
+#                        A value of ``-`` or ``""`` will clear the suffix.
 #
-# ``-P <<prefix>>``    → Following variables will be prefixed with this.
+# **Declaration arguments:**
 #
-# ``-S <<suffix>>``    → Following variables will be suffixed with this.
-#
-# ``-n <<a>> <<t>>``   → Assign variable ((a)) as a link to variable ((t)).
-#              Uses current ((prefix)) and ((suffix)), but NOT ((flag)).
-# ``-i <<a>> <<v>>``   → Assign variable ((a)) with value ((v)).
-#              Uses current ((prefix)), ((suffix)), and ((flag)).
-#
-# Any other standalone value not recognized as one of the above options will
-# be declared as a variable with the ((prefix)), ((suffix)), and ((flag)).
-# No **value** will be assigned in the standalone declarations.
+# ``<<var>> = <<val>>``      → Declare variable ((var)) with value ((val)).
+#                        The whitespace around ``=`` is REQUIRED.
+#                        Quotes around the value are RECOMMENDED.
+# ``<<var>>``              → Declare variable with no initial value.
+#                        The ``-n`` modifier CANNOT use this style.
 #
 lum::var() {
-  local flag prefix suffix
+  local flag='--' prefix suffix
   while [ $# -gt 0 ]; do
     case "$1" in
-      -A|-a|-i|-r)
+      --|-A|-a|-i|-r|-n)
         flag="$1"
         shift
       ;;
       -P)
         prefix="$2"
+        [ "$prefix" = '-' ] && prefix=
         shift 2
       ;;
       -S)
         suffix="$2"
+        [ "$suffix" = '-' ] && suffix=
         shift 2
       ;;
-      -n)
-        declare -g -n "$prefix$2$suffix"="$3"
-        shift 3
-      ;;
-      -=)
-        declare -g $flag "$prefix$2$suffix"="$3"
-        shift 3
-      ;;
       *)
-        declare -g $flag "$prefix$1$suffix"
-        shift
+        if [ $# -ge 3 -a "$2" = "=" ]; then
+          declare -g $flag "$prefix$1$suffix"="$3"
+          shift 3
+        else
+          [ "$flag" = "-n" ] && lum::help::usage
+          declare -g $flag "$prefix$1$suffix"
+          shift
+        fi
       ;;
     esac
   done
 }
-
-lum::var -P LUM_FN_ -A FILES ALIAS FLAGS HELP_TAGS -i DEBUG
-lum::var -A -P LUM_ALIAS_ FN GROUPS
 
 #$ lum::fn `{opts...}` <<name>> [[flags=0]] `{defs...}`
 #
@@ -119,8 +118,12 @@ lum::fn() {
   fi
 }
 
-lum::fn lum::fn 1
-lum::fn lum::var 1
+### Bootstrap variables
+
+lum::var -P LUM_FN_ -A FILES ALIAS FLAGS HELP_TAGS -i DEBUG
+lum::var -A -P LUM_ALIAS_ FN GROUPS
+
+### Main functions
 
 lum::fn lum::fn::alias
 #$ <<funcname>> <<alias>> [[opts=0]] [[list=0]]
@@ -214,8 +217,6 @@ lum::fn::helpTags() {
   done
 }
 
-lum::fn::helpTags '*' 0 5 1 3 2 0
-
 lum::fn lum::use::load-subs
 #$ [[path]]
 #
@@ -234,6 +235,13 @@ lum::use::load-subs() {
     done
   fi
 }
+
+### Setup and registration
+
+lum::fn::helpTags '*' 0 5 1 3 2 0
+
+lum::fn lum::fn 1
+lum::fn lum::var 1 -t 0 7
 
 ### Extra documentation
 

@@ -24,44 +24,61 @@ lum::fn lum::use
 # ``--opt``           Following items are optional.
 # ``--conf``          Following items are config files.
 # ``--lib``           Following items are library files.
+# ``--once``          Following items should only be loaded once.
+# ``--reload``        Following items should be loaded every time.
 #
-# Default options are as if ``--need --lib`` was passed.
+# Default options are as if ``--need --lib --once`` was passed.
 #
 lum::use() {
-  local libFile isFatal=1 useConf=0 cacheKey findFile prefix
+  local libFile isFatal=1 useConf=0 reload=0 cacheKey prefix
   while [ "$#" -gt 0 ]; do
-    if [ "$1" = "--need" ]; then
-      isFatal=1
-    elif [ "$1" = "--opt" ]; then 
-      isFatal=0
-    elif [ "$1" = "--conf" ]; then
-      useConf=1
-    elif [ "$1" = "--lib" ]; then 
-      useConf=0
-    else
-      cacheKey="$useConf:$1"
-      #echo "use($cacheKey) = ${LUM_USE_NAMES[$cacheKey]}" >&2
-      [ "${LUM_USE_NAMES[$cacheKey]}" = "1" ] && shift && continue
-      if [ $useConf -eq 1 ]; then
-        findFile="${1//::/\/}"
-        libFile="$(lum::use::find $1.conf ${LUM_CONF_DIRS[@]})"
-      else
-        libFile="$(lum::use::findPrefixed $1.sh)"
-        if [ $? -ne 0 ]; then
-          libFile="$(lum::use::find ${1//::/\/}.sh ${LUM_LIB_DIRS[@]})"
+    case "$1" in
+      --need)
+        isFatal=1
+      ;;
+      --opt) 
+        isFatal=0
+      ;;
+      --conf)
+        useConf=1
+      ;;
+      --lib) 
+        useConf=0
+      ;;
+      --reload)
+        reload=1
+      ;;
+      --once)
+        reload=0
+      ;;
+      *)
+        cacheKey="$useConf:$1"
+        #echo "use($cacheKey) = ${LUM_USE_NAMES[$cacheKey]}" >&2
+        if [ "$reload" = "0" -a "${LUM_USE_NAMES[$cacheKey]}" = "1" ]; then 
+          shift
+          continue
         fi
-      fi
 
-      if [ -n "$libFile" -a -f "$libFile" ]; then 
-        [ "${LUM_USE_FILES[$libFile]}" = "1" ] && shift && continue
-        [ $useConf -eq 1 ] && lum::use::-conf "$libFile" || . "$libFile"
-        LUM_USE_NAMES[$cacheKey]=1
-        LUM_USE_FILES[$libFile]=1
-      elif [ $isFatal -eq 1 ]; then
-        echo "Could not find $1 library."
-        exit $LUM_USE_ERRCODE
-      fi
-    fi
+        if [ $useConf -eq 1 ]; then
+          libFile="$(lum::use::find "${1//::/\/}.conf" "${LUM_CONF_DIRS[@]}")"
+        else
+          libFile="$(lum::use::findPrefixed $1.sh)"
+          if [ $? -ne 0 ]; then
+            libFile="$(lum::use::find "${1//::/\/}.sh" "${LUM_LIB_DIRS[@]}")"
+          fi
+        fi
+
+        if [ -n "$libFile" -a -f "$libFile" ]; then 
+          [ "${LUM_USE_FILES[$libFile]}" = "1" ] && shift && continue
+          [ $useConf -eq 1 ] && lum::use::-conf "$libFile" || . "$libFile"
+          LUM_USE_NAMES[$cacheKey]=1
+          LUM_USE_FILES[$libFile]=1
+        elif [ $isFatal -eq 1 ]; then
+          echo "Could not find $1 library."
+          exit $LUM_USE_ERRCODE
+        fi
+      ;;
+    esac
     shift
   done
 }
