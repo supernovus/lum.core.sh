@@ -35,7 +35,7 @@ lum::fn lum::test::list 0 -a --list 1 LUM_TEST_CMDS -a list 0 0
 #
 lum::test::list() {
   if [ $# -eq 0 ]; then
-    lum::help::list LUM_TEST_CMDS 20 "-" " '" "'"
+    lum::help::list LUM_TEST_CMDS 20 "- " " '" "'"
   else
     lum::fn::list "$@"
   fi

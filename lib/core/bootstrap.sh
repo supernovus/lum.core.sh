@@ -255,7 +255,8 @@ lum::fn lum::fn.flags 2
 # ``2``    The help text must end with a `{#: funcname}` line.
 #        Useful for documenting topics without an actual function.
 #        If not set, the help text ends at the function declaration.
-#        This flag is *always* enabled for library/sub-module help text.
+#        If no valid end-line is found, ends at first non-comment line.
+# ``4``    The usage line is also the summary.
 #
 #: lum::fn.flags
 

@@ -25,15 +25,17 @@ lum::fn lum::help
 #
 lum::help() {
   [ $# -lt 1 ] && lum::help::usage
-  local prefind suffind dName fName="$1" S E output
+  local prefind  dName fName="$1" S
   local -i want=${2:-0}
   local err="${LUM_THEME[error]}"
   local end="${LUM_THEME[end]}"
-  local -i SF=1 EF=2
+  local -i SF=1 EF=2 US=4 FS=0
 
   [ -n "${LUM_ALIAS_FN[$fName]}" ] && fName="${LUM_ALIAS_FN[$fName]}"
   
-  local -i flags="${LUM_FN_FLAGS[$fName]:-0}" 
+  local -i flags="${LUM_FN_FLAGS[$fName]:-0}"
+  lum::flag::is $flags $SF && FS=1
+
   local usageTags _tk="$want|$fName" _ak="$want|*"
   local wantTags="${LUM_FN_HELP_TAGS[$_tk]:-${LUM_FN_HELP_TAGS[$_ak]}}"
 
@@ -47,11 +49,11 @@ lum::help() {
 
   if [ -n "${LUM_FN_ALIAS[$fName]}" ]; then
     dName="${LUM_FN_ALIAS[$fName]} "
-  elif lum::flag::not $flags 1; then
+  elif [ $FS -eq 0 ]; then
     dName="$fName "
   fi
 
-  if lum::flag::is $flags $SF; then
+  if [ $FS -eq 1 ]; then
     prefind="${LUM_HELP_START_MARKER} $fName"
   else
     prefind="$LUM_HELP_START_FN $fName"
@@ -73,36 +75,50 @@ lum::help() {
     return 2
   fi
 
-  lum::flag::not $flags $SF && ((S++))
+  [ $FS -eq 0 ] && ((S++))
 
   if [ "$want" = 2 ]; then
-    ((S+=2))
-    sed -n "${S}{s/^#//;p}" "$LFILE" | lum::help::tmpl $wantTags
+    local start
+    if lum::flag::is $flags $US; then 
+      start="$LUM_HELP_START_MARKER"
+    else
+      start='#'
+      ((S+=2))
+    fi
+    sed -n "${S}{s/^${start}\s*//;p}" "$LFILE" | lum::help::tmpl $wantTags
     return 0
   fi
 
-  if [ "$want" = 0 ]; then
-    if lum::flag::is $flags $EF; then 
-      suffind="${LUM_HELP_END_MARKER} $fName"
-    else 
-      suffind="${fName}()"
-    fi
-    E=$(grep -nm 1 "^$suffind" "$LFILE" | cut -d: -f1)
-    if [ -z "$E" ]; then
-      echo "no function definition found for '$err$fName$end'" >&2
-      return 3
-    fi
-  fi
-
-  #echo "<help> S='$S',E='$E'"
-  #echo -n "$dName"
-  sed -n "${S}{s/$LUM_HELP_START_MARKER\s*/$dName/;p}" "$LFILE" | lum::help::tmpl $usageTags
+  local output="$(sed -n "${S}{s/$LUM_HELP_START_MARKER\s*/$dName/;p}" "$LFILE")"
+  [ $FS -eq 1 -a -n "$dName" ] && output="${output/$fName}"
+  echo "$output" | lum::help::tmpl $usageTags
   [ "$want" = 1 ] && return 0
 
   ((S++))
-  ((E--))
-  #echo "<help> S='$S',E='$E'"
-  sed -n "${S},${E}{s/^#//;p}" "$LFILE" | lum::help::tmpl $wantTags
+
+  local suffind E
+  if lum::flag::is $flags $EF; then 
+    suffind="${LUM_HELP_END_MARKER} $fName"
+  else 
+    suffind="${fName}()"
+  fi
+  E=$(grep -nm 1 "^$suffind" "$LFILE" | cut -d: -f1)
+
+  if [ -n "$E" ]; then
+    ((E--))
+    sed -n "${S},${E}{s/^#//;p}" "$LFILE" | lum::help::tmpl $wantTags
+  else
+    output=""
+    local line
+    while true; do
+      line="$(sed -n "${S}p" "$LFILE")"
+      [ "${line:0:1}" != "#" ] && break
+      output+="${line:1}\n"
+      ((S++))
+    done
+    echo -e "$output" | lum::help::tmpl $wantTags
+  fi
+
   return 0
 }
 
@@ -121,8 +137,6 @@ lum::help::diag() {
   local ec="${LUM_THEME[end]}"
   local fn sf ln
   ((E--))
-  #echo ">> BASH_SOURCE=${BASH_SOURCE[@]}" >&2
-  #echo ">> FUNCNAME=${FUNCNAME[@]}" >&2
   for L in $(seq $S $E);
   do
     fn="${FUNCNAME[$L]}"
@@ -383,6 +397,11 @@ lum::help::list() {
   done
 }
 
+lum::fn lum::help::moreinfo
+#$
+#
+# Show a help usage summary
+#
 lum::help::moreinfo() {
   local vc="${LUM_THEME[help.value]}"
   local ac="${LUM_THEME[help.arg]}"
