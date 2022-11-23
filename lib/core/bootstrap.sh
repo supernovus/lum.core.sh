@@ -7,25 +7,22 @@
 #
 # Declare global variables
 #
-# Arguments may be modifiers which affect following arguments, or declarations
-# which register variables using the ``declare`` statement.
-#
 # **Modifier arguments:**
 #
 # ``-A -a -i -r -n --``  → Following variables will use this declare type.
-#                        Default is ``--`` (regular variable).
 # ``-P <<prefix>>``        → Following variables will be prefixed with this.
-#                        A value of ``-`` or ``""`` will clear the prefix.
 # ``-S <<suffix>>``        → Following variables will be suffixed with this.
-#                        A value of ``-`` or ``""`` will clear the suffix.
+#
+# A ((prefix)) or ((suffix)) value of ``-`` is the same as ``""``.
 #
 # **Declaration arguments:**
 #
-# ``<<var>> = <<val>>``      → Declare variable ((var)) with value ((val)).
+# <<var>>                → Declare variable ((var)) with no initial value. 
+#                        The ``-n`` modifier CANNOT use this declaration.
+# <<var>> = <<val>>        → Declare variable ((var)) with value ((val)).
+#                        The ``-A -a`` modifiers CANNOT use this declaration.
 #                        The whitespace around ``=`` is REQUIRED.
-#                        Quotes around the value are RECOMMENDED.
-# ``<<var>>``              → Declare variable with no initial value.
-#                        The ``-n`` modifier CANNOT use this style.
+#                        Quotes around the ((val)) are RECOMMENDED.
 #
 lum::var() {
   local flag='--' prefix suffix
@@ -47,11 +44,12 @@ lum::var() {
       ;;
       *)
         if [ $# -ge 3 -a "$2" = "=" ]; then
-          declare -g $flag "$prefix$1$suffix"="$3"
+          [ "$flag" = "-a" -o "$flag" = "-A" ] && lum::help::usage
+          declare -g $flag $prefix$1$suffix="$3"
           shift 3
         else
           [ "$flag" = "-n" ] && lum::help::usage
-          declare -g $flag "$prefix$1$suffix"
+          declare -g $flag $prefix$1$suffix
           shift
         fi
       ;;
