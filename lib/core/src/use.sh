@@ -69,7 +69,10 @@ lum::use() {
         fi
 
         if [ -n "$libFile" -a -f "$libFile" ]; then 
-          [ "${LUM_USE_FILES[$libFile]}" = "1" ] && shift && continue
+          if [ "$reload" = "0" -a "${LUM_USE_FILES[$libFile]}" = "1" ]; then
+            shift
+            continue
+          fi
           [ $useConf -eq 1 ] && lum::use::-conf "$libFile" || . "$libFile"
           LUM_USE_NAMES[$cacheKey]=1
           LUM_USE_FILES[$libFile]=1
