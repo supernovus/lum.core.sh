@@ -4,6 +4,8 @@
 [ -z "$LUM_USAGE_TITLE" ] && LUM_USAGE_TITLE="usage: "
 [ -z "$LUM_USAGE_MORE_INFO" ] && LUM_USAGE_MORE_INFO=1
 [ -z "$LUM_USAGE_STACK" ] && LUM_USAGE_STACK=0
+[ -z "$LUM_WARN_LVL" ] && LUM_WARN_LVL=-1
+[ -z "$LUM_ERR_LVL" ] && LUM_ERR_LVL=2
 
 declare -gr LUM_HELP_START_FN="lum::fn"
 declare -gr LUM_HELP_START_MARKER="#$"
@@ -17,6 +19,7 @@ lum::fn lum::help
 # Show help information for a function.
 #
 # ((name))      Name of the function (e.g. ``lum::help``)
+#           If set to ``0``, uses the name of the calling function.
 #
 # ((mode))      What help text we want to return:
 #           ``0`` = Return the entire help text.
@@ -25,11 +28,13 @@ lum::fn lum::help
 #
 lum::help() {
   [ $# -lt 1 ] && lum::help::usage
-  local prefind  dName fName="$1" S
+  local prefind  dName fName="${1:-0}" S
   local -i want=${2:-0}
   local err="${LUM_THEME[error]}"
   local end="${LUM_THEME[end]}"
   local -i SF=1 EF=2 US=4 FS=0
+
+  [ "$fName" = "0" ] && fName="${FUNCNAME[1]}"
 
   [ -n "${LUM_ALIAS_FN[$fName]}" ] && fName="${LUM_ALIAS_FN[$fName]}"
   
@@ -146,6 +151,46 @@ lum::help::diag() {
   done
 }
 
+lum::fn lum::warn
+#$ <<message>> [[diagLvl=-1]]
+#
+# Issue a warning message
+#
+# ((message))      The message to output to ``STDERR`` using ``echo -e``.
+#
+# ((diagLvl))      Passed to ``lum::help::diag`` if greater than ``-1``.
+#              Default can be changed via ``LUM_WARN_LVL``
+#
+lum::warn() {
+  [ $# -lt 1 ] && lum::help::usage
+  local msg="$1" 
+  local -i DL="${2:-$LUM_WARN_LVL}"
+  echo -e "$1" >&2
+  [ $DL -gt -1 ] && lum::help::diag $DL >&2
+}
+
+lum::fn lum::err
+#$ <<message>> [[errcode=1]] [[diagLvl=2]] 
+#
+# Issue an error message
+#
+# ((message))      The message to output to ``STDERR`` using ``echo -e``.
+#
+# ((errcode))      Error code to return when exiting script.
+#              If set to ``-1`` then exit won't be called.
+#
+# ((diagLvl))      Passed to ``lum::help::diag`` if greater than ``-1``.
+#              Default can be changed via ``LUM_ERR_LVL``.
+#
+lum::err() {
+  [ $# -lt 1 ] && lum::help::usage
+  local msg="$1" 
+  local -i errCode="${2:-1}" DL="${3:-$LUM_ERR_LVL}"
+  echo -e "$1" >&2
+  [ $DL -gt -1 ] && lum::help::diag $DL >&2
+  [ "$errCode" -gt -1 ] && exit $errCode
+}
+
 lum::fn lum::help::usage
 #$ [[funcname]] [[errcode=100]]
 #
@@ -159,7 +204,7 @@ lum::fn lum::help::usage
 #           If set to ``-1`` then exit won't be called.
 #
 lum::help::usage() {
-  local fName want errCode DL
+  local fName want errCode="${2:-100}" DL
 
   if [ -z "$1" -o "$1" = "0" ]; then
     fName="${FUNCNAME[1]}"
@@ -169,7 +214,6 @@ lum::help::usage() {
     DL=1
   fi
 
-  errCode=${2:-100}
   want="$(lum::help $fName 1)"
   if [ -n "$want" ]; then
     [ "$LUM_USAGE_TITLE" != "0" ] && want="${LUM_USAGE_TITLE}$want"
@@ -180,7 +224,7 @@ lum::help::usage() {
       lum::help::moreinfo >&2
     fi
   fi
-  [ $errCode -ne -1 ] && exit $errCode
+  [ $errCode -gt -1 ] && exit $errCode
 }
 
 lum::fn lum::help::tmpl

@@ -13,11 +13,9 @@ lum::fn lum::getopts
 #
 # Create a set of functions for parsing arguments with getopts.
 #
-# ((id))              A unique id; must be valid in bash variables.
-#
-# ((prefix))          The prefix for the functions.
-#                 Must be characters valid in bash functions.
-#                 The default if not specified is: ``${id}::``.
+# ((id))             - A unique id; must be valid in bash variables.
+# ((prefix))         - The prefix for the functions; default: ``${id}::``
+# ((listsep))        - A separator for list functions; default: ``+``
 #
 # This calls ``lum::getopts::init (($id))``, and then generates some
 # dynamically named functions that call the various ``lum::getopts::*`` 
@@ -33,12 +31,17 @@ lum::fn lum::getopts
 # ``((${prefix}))args``    → ``echo "${id}_ARGS"``
 # ``((${prefix}))lists``   → ``echo "${id}_LIST"``
 #
+# Plus for each ``+`` type argument defined:
+#
+# ``((${prefix}${listsep}${name}))``   → ``echo "${id}_${name}_VALS"``
+#
 lum::getopts() {
   [ $# -lt 1 ] && lum::help::usage
-  local id=$1 prefix=${2:-"${1}::"}
+  local id="$1" prefix="${2:-"${1}::"}" lsep="${3:-"+"}"
 
   lum::getopts::init $id
   declare -g "${id}_PREF"="$prefix"
+  declare -g "${id}_LSEP"="$lsep"
 
   lum::getopts::-wrap $prefix $id def
   lum::getopts::-wrap $prefix $id parse
@@ -50,12 +53,14 @@ lum::getopts() {
 lum::getopts::-wrap() {
   local prefix="$1" id="$2" sub="$3"
   local create="${prefix}${sub}" target="lum::getopts::$sub"
+  lum::fn::is "$create" && lum::warn "func $create already exists" && return 1
   lum::fn::make "$create" "$target" $id \"\$@\"
 }
 
 lum::getopts::-var() {
   local prefix="$1" id="$2" var="$3" func="$4"
   local create="${prefix}${func}" target="${id}_${var}"
+  lum::fn::is "$create" && lum::warn "func $create already exists" && return 1
   lum::fn::make "$create" echo \"$target\"
 }
 
@@ -80,9 +85,10 @@ lum::fn lum::getopts::init
 #
 # `{[-a]}` ``${id}_${name}_VALS``   One for each list (``+``) flag.
 #
-# If ``lum::getopts`` was used, one extra variable is added:
+# If ``lum::getopts`` was used, some extra variables are added:
 #
 # `{[--]}` ``${id}_PREF``           Function name prefix used.
+# `{[--]}` ``${id}_LSEP``           Function name list separator used.
 #
 lum::getopts::init() {
   [ $# -eq 0 ] && lum::help::usage
@@ -146,6 +152,13 @@ lum::getopts::def() {
         sVar="${id}_${sName}_VALS"
         setList[$sName]="$sVar"
         declare -ga "$sVar"
+        if lum::var::is "${id}_PREF"; then
+          ## Wrapper functions in use.
+          local -n prefix="${id}_PREF"
+          local -n lsep="${id}_LSEP"
+          local lName="$lsep$sName"
+          lum::getopts::-var $prefix $id "${sName}_VALS" "$lName"
+        fi
       ;;
       *)
         echo "invalid sType: '$sType'" >&2

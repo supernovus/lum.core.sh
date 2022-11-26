@@ -189,5 +189,3 @@ lum::use::confdir() {
   [ $# -lt 1 ] && lum::help::usage
   LUM_CONF_DIRS+=("$1")
 }
-
-

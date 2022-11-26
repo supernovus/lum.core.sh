@@ -107,8 +107,7 @@ lum::fn() {
           shift 3
         ;;
         *)
-          echo "unrecognized lum::fn argument '$1'" >&2
-          lum::help::diag 2
+          lum::warn "unrecognized lum::fn argument '$1'" 3
           shift
         ;;
       esac
@@ -118,8 +117,8 @@ lum::fn() {
 
 ### Bootstrap variables
 
-lum::var -P LUM_FN_ -A FILES ALIAS FLAGS HELP_TAGS -i DEBUG
-lum::var -A -P LUM_ALIAS_ FN GROUPS
+lum::var -P LUM_FN_ -A FILES ALIAS FLAGS HELP_TAGS -i DEBUG = 0
+lum::var -A -P LUM_ALIAS_ FN GROUPS 
 
 ### Main functions
 

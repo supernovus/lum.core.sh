@@ -105,11 +105,11 @@ lum::fn::make() {
 }
 
 lum::fn lum::fn::list
-#$ [[prefix]]
+#$ [[prefix]] 
 #
 # Show a list of functions.
 #
-# ((prefix))  Show only functions starting with this.
+# ((prefix))    Show only functions starting with this.
 #
 lum::fn::list() {
   compgen -A function "$1"
