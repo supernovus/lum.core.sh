@@ -4,6 +4,8 @@
 
 [ -n "$LUM_CORE_PKG_DIR" -a -d "$LUM_CORE_PKG_DIR" ] || lum::err "Not supported"
 
+lum::use lum::themes::default lum::getopts
+
 LUM_INST_PKG="$(dirname "$LUM_CORE_PKG_DIR")"
 LUM_CORE_NAME="$(basename "$LUM_CORE_PKG_DIR")"
 
@@ -15,7 +17,8 @@ case "$LUM_CORE_NAME" in
   lum-core)
     if [ -f "$LUM_PKG_INST_CONF" ]; then
       . "$LUM_PKG_INST_CONF"
-      [ -n "$LUM_SITE_PKG" ] && LUM_PKG_ROOTS+=("$LUM_SITE_PKG")
+      [ -n "$LUM_SITE_PKG" -a "$LUM_SITE_PKG" != "$LUM_INST_PKG" ] \
+        && LUM_PKG_ROOTS+=("$LUM_SITE_PKG")
     fi
   ;;
   core)
@@ -27,19 +30,18 @@ case "$LUM_CORE_NAME" in
   ;;
 esac
 
-lum::fn lum::help::cli
+lum::fn lum::help::cli 0 -a "$SCRIPTNAME" 1 0
 #$ [[options...]] <<topic>>
 #
 # Look up a help topic
 #
-# ((options))      Named options to change behaviours.
-#              See ``lum::help::cli.opts`` for details.
-# ((topic))        The name of a function or help topic.
+# ((options))      See ``lum-help-opts`` for details.
+# ((topic))        The name of a function or standalone help topic.
 #
 lum::help::cli() {
   lum::getopts lh
 
-  lh::def P pkg '+' L lib '+' l list '?'
+  lh::def P pkg '+' L lib '+' l list '#' u usage '#'
   lh::parse 1 "$@"
 
   local -n OPTS="$(lh::opts)"
@@ -47,7 +49,8 @@ lum::help::cli() {
   local -n PKGS="$(lh::+pkg)"
   local -n LIBS="$(lh::+lib)"
 
-  local pkg lib inc
+  local -i showList="${OPTS[list]:-0}"
+  local pkg lib
 
   for pkg in "${PKGS[@]}"; do
     lum::help::cli::+pkg "$pkg"
@@ -57,16 +60,14 @@ lum::help::cli() {
     lum::use "$lib"
   done
 
-  if [ -n "${OPTS[list]}" ]; then
-    pref="${OPTS[list]}"
-    [ "$pref" = '-' ] && pref='lum::'
-    lum::fn::list "$pref"
+  if [ $showList -gt 0 ]; then
+    lum::help::topics $showList "$ARGS"
     exit
   fi
 
-  #echo "LUM_PKG_ROOTS=${LUM_PKG_ROOTS[@]}"
+  local -i usage="${OPTS[usage]:-0}"
 
-  lum::help "$ARGS"
+  lum::help "$ARGS" $usage
 }
 
 lum::help::cli::+pkg() {
@@ -104,15 +105,20 @@ lum::help::cli::+pkg-conf() {
   done
 }
 
-lum::fn lum::help::cli.opts 2 -t 0 7
-#$
+lum::fn lum::help::cli.opts 6 -t 0 7 -a lum-help-opts 1 0
+#$ Options for lum-help CLI
 #
-# Options for ``lum::help::cli``
+# ``-P <<package>>``      Add a specific Lum.sh package.
+# ``-L <<libname>>``      Add a library from a package.
 #
-# ``-P <<package>>``      Add a specific package.
-# ``-L <<libname>>``      Add a library from a current package.
-# ``-l [[prefix]]``       Show a list of commands and exit.
-#                     If ((prefix)) is set, filter the list with it.
-#                     If not specified, default is: ``lum::``
+# ``-u``                Show only the usage line.
+#                     Use doubled ((``-uu``)) to show only the summary line.
+#
+# ``-l``                Show a list of help topics and exit.
+#                     Use doubled (``-ll``) to show ONLY aliases.
+#                     Use tripled (``-lll``) to show topics AND aliases.
+#
+#                     If a ((topic)) is specified with ``-l``, show only 
+#                     topics matching that string as a simple RegEx.
 #
 #: lum::help::cli.opts

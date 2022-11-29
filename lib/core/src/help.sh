@@ -7,6 +7,21 @@
 [ -z "$LUM_WARN_LVL" ] && LUM_WARN_LVL=-1
 [ -z "$LUM_ERR_LVL" ] && LUM_ERR_LVL=2
 
+declare -gA LUM_HELP_LIST_OPTS
+LUM_HELP_LIST_OPTS[pad]=-1
+LUM_HELP_LIST_OPTS[max]=0
+LUM_HELP_LIST_OPTS[sort]=0
+LUM_HELP_LIST_OPTS[follow]=1
+LUM_HELP_LIST_OPTS[sep]=" → "
+LUM_HELP_LIST_OPTS[prefix]=" "
+LUM_HELP_LIST_OPTS[suffix]=" "
+LUM_HELP_LIST_OPTS[nl]="  "
+
+declare -gA LUM_HELP_TOPICS_OPTS
+LUM_HELP_TOPICS_OPTS[max]=-1
+LUM_HELP_TOPICS_OPTS[sort]=1
+LUM_HELP_TOPICS_OPTS[follow]=0
+
 declare -gr LUM_HELP_START_FN="lum::fn"
 declare -gr LUM_HELP_START_MARKER="#$"
 declare -gr LUM_HELP_END_MARKER="#:"
@@ -408,36 +423,208 @@ lum::fn lum::help::tmpl.exts 2
 #: lum::help::tmpl.exts
 
 lum::fn lum::help::list
-#$ <list> [pad=20] [sep] [prefix] [suffix]
+#$ <<list>> [[display]]
 #
 # Print a list of commands from a list (array variable).
 #
 # ((list))      The name of the list variable.
-# 
-# ((pad))       The character length for the commands column.
-#           Most terminals are ``80`` characters in total.
-#           So the command column and description column should not
-#           exceed that.
-#
-# ((sep))       A separator between columns (e.g. ``"-"``)
-#
-# ((prefix))    Prefix for command columns (e.g. ``" '"``)
-#
-# ((suffix))    Suffix for command columns (e.g. ``"'"``)
+# ((display))   The name of a variable with display settings.
+#           If not specified (or ``-``) we use global defaults.
+#           See ``lum::help::list.display`` for details.
 #
 lum::help::list() {
   [ $# -lt 1 ] && lum::help::usage
 
-  local pad="${2:-20}" sep="$3" pf="$4" sf="$5" C K U
-  local -n list="$1"
+  local -n sourceList="$1" 
+  local -A listOpts
+
+  lum::var::mergeMaps listOpts LUM_HELP_LIST_OPTS "$2"
+
+  local sep="${listOpts[sep]}"
+  local pf="${listOpts[prefix]}"
+  local sf="${listOpts[suffix]}"
+  local nl="${listOpts[nl]}"
+  local -i max="${listOpts[max]}"
+  local -i follow="${listOpts[follow]}"
+  local -i pad="${listOpts[pad]}"
+  local -i sort="${listOpts[sort]}"
+
   local ic="${LUM_THEME[help.list.item]}"
   local sc="${LUM_THEME[help.syntax]}"
+  local pc="${LUM_THEME[help.param]}"
   local ec="${LUM_THEME[end]}"
 
-  for K in "${list[@]}"; do
+  local C K U W
+  local -i L
+
+  if [ $pad -eq -1 ]; then
+    local -a tempList=()
+    lum::help::+list sourceList tempList pad
+    sourceList=("${tempList[@]}")
+    (( pad += ${#pf} + ${#sf} ))
+  fi
+
+  if [ $sort -eq 1 ]; then
+    local -a tempList=()
+    lum::var::sort sourceList tempList
+    sourceList=("${tempList[@]}")
+  fi
+
+  [ $max -eq -1 ] && max="$(stty size | cut -d' ' -f2)"
+
+  for K in "${sourceList[@]}"; do
     C="$(lum::str::pad $pad "$pf$K$sf")"
-    U="$(lum::help $K 2)"
-    echo "$ic$C$sc$sep$ec$U"
+    if [ $follow -eq 0 -a -n "${LUM_ALIAS_FN[$K]}" ]; then
+      U="$pc${LUM_ALIAS_FN[$K]}$ec"
+      W="$pc$ec"
+    else
+      U="$ec$(lum::help $K 2)"
+      W="$ec"
+    fi
+    L=$(( ${#C} + ${#U} + ${#sep} - ${#W} ))
+    if [ $max -gt 0 -a $L -gt $max ]; then
+      #lum::warn "+wrapping: max=$max; lc=${L}"
+      echo "$ic$C"
+      echo "$sc$nl$sep$U"
+    else
+      echo "$ic$C$sc$sep$U"
+    fi
+  done
+}
+
+lum::fn lum::help::list.display 2
+#$ 
+#
+# Display variables for lum::help::list
+#
+# Must be declared as ``-A`` associative array type variables.
+# May contain any of the following settings:
+#
+# Name/Key        Default      Description
+#
+# ``pad``           `{-1}`           Pad each item name to be this long.
+#                              - If ``-1``, determine automatically.
+#                              - If ``0``, no padding done.
+# ``max``           `{0}`            Max width of a line before we wrap.
+#                              - If ``-1``, determine automatically.
+#                              - If ``0``, no line wrapping done.
+# ``sep``           `{" → "}`        Separator between name and description.
+# ``prefix``        `{" "}`          Display at the start of the item name.
+# ``suffix``        `{" "}`          Display at the end of the item name.
+# ``nl``            `{"  "}`         Prefix for wrapped lines (see ``max``).
+# ``sort``          `{0}`            Sort the list before displaying?
+# ``follow``        `{1}`            Follow aliases for description?
+#                              - If ``0``, show the target name instead.
+#
+# Any setting not explicitly set, will use the default.
+#
+#: lum::help::list.display
+
+lum::fn lum::help::topics
+#$ <<types>> [[find]] [[display]]
+#
+# Show a list of functions and/or help topics.
+#
+# ((types))      What types of topics to list (as bitwise flags).
+#            At least one flag **MUST** be specified.
+#
+#            ``1`` = Show functions/topics registered with ``lum::fn``.
+#            ``2`` = Show aliases registered with ``lum::fn(::alias)``.
+#
+# ((find))       Show only items containing this value.
+# ((display))    The name of a variable with display settings.
+#            See ``lum::help::topics.display`` for details.
+#
+lum::help::topics() {
+  local -i flags="${1:-0}"
+
+  if [ $flags -eq 0 ]; then
+    lum::err "no type flags specified"
+  else
+    local -A topicsDisplayOpts
+    lum::var::mergeMaps topicsDisplayOpts \
+      LUM_HELP_LIST_OPTS \
+      LUM_HELP_TOPICS_OPTS \
+      "$3"
+
+    local find="$2"
+    local -ir FN=1 FA=2
+    local -i pad="${topicsDisplayOpts[pad]}"
+    local pf="${topicsDisplayOpts[prefix]}"
+    local sf="${topicsDisplayOpts[suffix]}"
+    local -a topicList
+    local fn ref padVar
+
+    [ $pad -eq -1 ] && padVar='pad' || padVar='-'
+
+    if lum::flag::is $flags $FN; then
+      lum::help::+map LUM_FN_FILES topicList $padVar "$find"
+    fi
+
+    if lum::flag::is $flags $FA; then
+      lum::help::+map LUM_ALIAS_FN topicList $padVar "$find"
+    fi
+
+    if [ "${#topicList[@]}" -eq 0 ]; then
+      lum::warn "no matching topics"
+      return 1
+    fi
+
+    if [ $pad -gt 0 ]; then
+      (( pad += ${#pf} + ${#sf} ))
+      topicsDisplayOpts[pad]=$pad
+    fi
+
+    lum::help::list topicList topicsDisplayOpts
+  fi
+  
+  return 0
+}
+
+lum::fn lum::help::topics.display 2
+#$ 
+#
+# Display variables for lum::help::topics
+#
+# Uses the same settings as ``lum::help::list``, but a few of the 
+# settings have different default values:
+#
+# Name/Key        Default      Reasoning for difference
+#
+# ``max``           `{-1}`           Auto-wrapping is desired here.
+# ``sort``          `{1}`            Allows for a known topic order.
+# ``follow``        `{0}`            If listing aliases, show the target.
+#
+# See ``lum::help::list.display`` for the full list of settings.
+#
+#: lum::help::topics.display
+
+lum::help::+map() {
+  local -n helpMapVar="$1"
+  local -a helpMapList=("${!helpMapVar[@]}")
+  lum::help::+list helpMapList "$2" "$3" "$4"
+}
+
+lum::help::+list() {
+  local fn
+  local -n helpInputList="$1"
+  local -n helpOutputList="$2"
+  local -i currPad=-1
+  if [ -n "$3" -a "$3" != "-" ]; then
+    currPad=0
+    local -n maxiPad="$3"
+  fi
+  local find="$4"
+
+  for fn in "${helpInputList[@]}"; do
+    if [ -n "$find" ]; then
+      [[ $fn =~ $find ]] || continue
+    fi
+    helpOutputList+=("$fn")
+    if [ $currPad -gt -1 ]; then
+      currPad="${#fn}"
+      [ $currPad -gt $maxiPad ] && maxiPad=$currPad
+    fi
   done
 }
 

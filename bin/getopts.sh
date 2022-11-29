@@ -6,7 +6,7 @@ LUM_FN_DEBUG=0
 
 . "$LUM_CORE_BIN_DIR/../lib/core.sh"
 
-lum::fn getopts-usage 2
+lum::fn getopts-usage 2 -a "$SCRIPTNAME" 1 0
 #$ [[options...]] [[positionalArgs...]]
 #
 # Flag      Name          Type          Description
