@@ -423,7 +423,7 @@ lum::fn lum::help::tmpl.exts 2
 #: lum::help::tmpl.exts
 
 lum::fn lum::help::list
-#$ <<list>> [[display]]
+#$ <<list>> [[display]] [[fullDisp=0]]
 #
 # Print a list of commands from a list (array variable).
 #
@@ -431,14 +431,20 @@ lum::fn lum::help::list
 # ((display))   The name of a variable with display settings.
 #           If not specified (or ``-``) we use global defaults.
 #           See ``lum::help::list.display`` for details.
+# ((fullDisp))  If ``1`` then ((display)) must have ALL settings defined.
 #
 lum::help::list() {
   [ $# -lt 1 ] && lum::help::usage
 
-  local -n sourceList="$1" 
-  local -A listOpts
+  local -n sourceList="$1"
+  local -i fullDisp="${3:-0}"
 
-  lum::var::mergeMaps listOpts LUM_HELP_LIST_OPTS "$2"
+  if [ $fullDisp -eq 1 ]; then
+    local -n listOpts="$2"
+  else
+    local -A listOpts
+    lum::var::mergeMaps listOpts LUM_HELP_LIST_OPTS "$2"
+  fi
 
   local sep="${listOpts[sep]}"
   local pf="${listOpts[prefix]}"
@@ -575,7 +581,7 @@ lum::help::topics() {
       topicsDisplayOpts[pad]=$pad
     fi
 
-    lum::help::list topicList topicsDisplayOpts
+    lum::help::list topicList topicsDisplayOpts 1
   fi
   
   return 0
