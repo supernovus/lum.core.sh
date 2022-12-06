@@ -3,56 +3,97 @@
 
 ### Proto-bootstrap functions
 
-#$ lum::var `{...}`
+#$ lum::var - Declare global variables
 #
-# Declare global variables
-#
-# **Modifier arguments:**
+# **Modifier options:**
 #
 # ``-A -a -i -r -n --``  → Following variables will use this declare type.
 # ``-P <<prefix>>``        → Following variables will be prefixed with this.
 # ``-S <<suffix>>``        → Following variables will be suffixed with this.
+# ``<<T>>=[[end=-]] <<var>>``    → Set the context (see below). \
+#                        ((T)) can be one of ``-a -A``.
 #
 # A ((prefix)) or ((suffix)) value of ``-`` is the same as ``""``.
 #
+# When in a context, none of the modifier options have any effect.
+# The context will reset to default when the ((end)) value (default ``-``)
+# is passed as an argument. 
+# 
 # **Declaration arguments:**
 #
-# <<var>>                → Declare variable ((var)) with no initial value. 
-#                        The ``-n`` modifier CANNOT use this declaration.
-# <<var>> = <<val>>        → Declare variable ((var)) with value ((val)).
-#                        The ``-A -a`` modifiers CANNOT use this declaration.
-#                        The whitespace around ``=`` is REQUIRED.
-#                        Quotes around the ((val)) are RECOMMENDED.
+# See ``lum::var.args`` for regular (non-context) arguments.
+# See ``lum::var.args-a`` for arguments in the ``-a`` context.
+# See ``lum::var.args-A`` for arguments in the ``-A`` context.
 #
 lum::var() {
-  local flag='--' prefix suffix
+  local flag='--' cmode='--' prefix suffix cvar echar='-' varname
   while [ $# -gt 0 ]; do
-    case "$1" in
-      --|-A|-a|-i|-r|-n)
-        flag="$1"
+    if [ "$cmode" != '--' -a "$1" = "$echar" ]; then
+      cmode='--'
+      shift
+      continue
+    fi
+    case "$cmode" in
+      -A)
+        [ $# -lt 3 ] && lum::err "invalid # of args"
+        if [ "${2:1:1}" = "?" ]; then
+          [ -z "${cvar[$1]}" ] && cvar[$1]="$3"
+        else
+          cvar[$1]="$3"
+        fi
+        shift 3
+      ;;
+      -a)
+        cvar+=("$1")
         shift
       ;;
-      -P)
-        prefix="$2"
-        [ "$prefix" = '-' ] && prefix=
-        shift 2
-      ;;
-      -S)
-        suffix="$2"
-        [ "$suffix" = '-' ] && suffix=
-        shift 2
-      ;;
-      *)
-        if [ $# -ge 3 -a "$2" = "=" ]; then
-          [ "$flag" = "-a" -o "$flag" = "-A" ] && lum::help::usage
-          declare -g $flag $prefix$1$suffix="$3"
-          shift 3
-        else
-          [ "$flag" = "-n" ] && lum::help::usage
-          declare -g $flag $prefix$1$suffix
-          shift
-        fi
-      ;;
+      *) ## regular context
+        case "$1" in
+          --|-A|-a|-i|-r|-n|-ir|-ri)
+            flag="$1"
+            shift
+          ;;
+          -P)
+            prefix="$2"
+            [ "$prefix" = '-' ] && prefix=
+            shift 2
+          ;;
+          -S)
+            suffix="$2"
+            [ "$suffix" = '-' ] && suffix=
+            shift 2
+          ;;
+          -a=*|-A=*)
+            cmode="${1:0:2}"
+            echar="${1:3}"
+            [ -z "$echar" ] && echar='-'
+            [ "$cmode" = "-a" -a $# -lt 3 ] && lum::help::usage
+            [ "$cmode" = "-A" -a $# -lt 5 ] && lum::help::usage
+            varname="$prefix$2$suffix"
+            declare -g $cmode $varname
+            local -n cvar="$varname"
+            shift 2
+          ;;
+          *)
+            varname="$prefix$1$suffix"
+            if [ $# -ge 3 -a "${2:0:1}" = "=" ]; then
+              [ "$flag" = "-A" -o "$flag" = "-a" ] && lum::help::usage
+              if [ "${2:1:1}" = "?" ]; then
+                declare -g $flag $varname
+                local -n __var="$varname"
+                [ -z "$__var" ] && __var="$3"
+              else
+                declare -g $flag $varname="$3"
+              fi
+              shift 3
+            else
+              [ "$flag" = "-n" ] && lum::help::usage
+              declare -g $flag $varname
+              shift
+            fi
+          ;;
+        esac
+      ;; ## end regular context
     esac
   done
 }
@@ -74,24 +115,50 @@ lum::var() {
 #
 lum::fn() {
   [ $# -lt 1 ] && lum::help::usage
-  local caller
-  if [ "$1" = "--from" -a $# -ge 3 ]; then
-    caller="$2"
-    shift 2
-  else
-    local -i callBack=1
-    if [ "$1" = "-C" -a $# -ge 3 ]; then
-      callBack=$2
-      shift 2
-    fi
-    caller="${BASH_SOURCE[$callBack]}"
-  fi
+
+  local srcfile regfn 
+  local -i srcCB=1 regCB=0
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --src)
+        [ $# -lt 3 ] && lum::help::usage
+        srcfile="$2"
+        shift 2
+      ;;
+      --reg)
+        [ $# -lt 3 ] && lum::help::usage
+        regfn="$2"
+        shift 2
+      ;;
+      -S)
+        [ $# -lt 3 ] && lum::help::usage
+        srcCB="$2"
+        shift 2
+      ;;
+      -R)
+        [ $# -lt 3 ] && lum::help::usage
+        regCB="$2"
+        shift 2
+      ;;
+      *)
+        ## Anything else is a regular parameter.
+        break
+      ;;
+    esac
+  done
+
+  [ -z "$srcfile" ] && srcfile="${BASH_SOURCE[$srcCB]}"
+  [ -z "$regfn" ] && regfn="${FUNCNAME[$regCB]}"
 
   local fName="$1" fOpts="${2:-0}"
-  LUM_FN_FILES[$fName]="$caller"
+  LUM_FN_FILES[$fName]="$srcfile"
+  LUM_FN_REGFN[$fName]="$regfn"
   LUM_FN_FLAGS[$fName]="$fOpts"
+
   if [ $# -gt 2 ]; then
     shift 2
+    local hOpts=
     while [ $# -gt 0 ]; do
       case "$1" in 
         -a)
@@ -103,7 +170,15 @@ lum::fn() {
           shift 3
         ;;
         -t)
-          lum::fn::helpTags "$fName" "$2" "$3"
+          lum::fn::help -t "$fName" "$2" "$3"
+          shift 3
+        ;;
+        -h)
+          lum::fn::help -d -f "$fName" -m $2 $3
+          shift 3
+        ;;
+        -H)
+          lum::fn::help -f "$fName" -m $2 '+' $3
           shift 3
         ;;
         *)
@@ -117,8 +192,10 @@ lum::fn() {
 
 ### Bootstrap variables
 
-lum::var -P LUM_FN_ -A FILES ALIAS FLAGS HELP_TAGS -i DEBUG = 0
-lum::var -A -P LUM_ALIAS_ FN GROUPS 
+lum::var -P LUM_FN_ \
+  -A FILES REGFN ALIAS FLAGS HELP \
+  -i DEBUG = 0
+lum::var -A -P LUM_ALIAS_ FN GROUPS
 
 ### Main functions
 
@@ -185,33 +262,120 @@ lum::fn::alias::group() {
   LUM_ALIAS_GROUPS[$name]="$opts $list"
 }
 
-lum::fn lum::fn::helpTags
-#$ <<funcname>> <<mode>> <<tags>>
-#
-# Set help template tags for a function/topic.
-#
-# ((funcname))   `{[str]}` The full function or topic name.
-#             A value of ``*`` is special, being fallback values
-#             for functions without their own settings.
-#
-# ((mode))       `{[int]}` The help mode this applies to.
-#             See ``lum::help`` for a list of modes.
-#
-# ((tags))       `{[int]}` The template tags allowed in this mode.
-#             See ``lum::help::tmpl`` for a list of tags.
-#
-# The last two parameters may be specified multiple times, always
-# in matching pairs.
+lum::fn lum::fn::help
+#$ `{...}`
 # 
-lum::fn::helpTags() {
-  [ $# -lt 3 ] && lum::help::usage 
-  local name="$1" key
-  shift
+# Set help topic settings
+#
+# ``-f <<fn>>``             Set ((fn)) context.
+#                       ``*`` is reserved for fallback defaults.
+# ``-g <<group>>``          Set ((group)) context.
+#
+# ``-m <<mode>> <<group>>``   Set ((group)) for ((fn)):((mode)); set context.
+#                       Group may be a special value:
+#                         ``+`` → Use auto-generated id.
+#                         ``=`` → Set context to current id for ((mode)).
+#                       See ``lum::help`` for a list of ((mode)) values.
+#
+# <<def>>                 Add ((def)) to context ((group)).
+#                       See ``lum::help.defs`` for details.
+#
+# See ``lum::fn::help.opts`` for more options.
+#
+lum::fn::help() {
+  local fn gname prefix suffix key mode
+  local -i case=0
+  local -ri CS=0 LC=-1 UC=1
   while [ $# -gt 0 ]; do
-    key="$1|$name"
-    LUM_FN_HELP_TAGS[$key]="$2"
-    shift 2
-  done
+    case "$1" in
+      -f)
+        [ $# -lt 2 ] && lum::help::usage
+        fn="$2"
+        shift 2
+      ;;
+      -g)
+        [ $# -lt 2 ] && lum::help::usage
+        gname="$(lum::var::id "$prefix$2$suffix" $case)"
+        declare -ga "$gname"
+        local -n group="$gname"
+        shift 2
+      ;;
+      -m)
+        [ $# -lt 3 -o -z "$fn" ] && lum::help::usage
+        key="$2|$fn"
+        case "$3" in 
+          +)
+            gname="$(lum::var::id "$prefix${fn}_$2$suffix" $case)"
+          ;;
+          =)
+            gname="${LUM_FN_HELP[$key]}"
+            [ -z "$gname" ] && lum::err "help group not set for $key"
+          ;;
+          *)
+            gname="$(lum::var::id "$prefix$3$suffix" $case)"
+          ;;
+        esac
+        if [ "$3" != '=' ]; then 
+          declare -ga "$gname"
+          LUM_FN_HELP[$key]="$gname"
+        fi
+        local -n group="$gname"
+        shift 2
+      ;;
+      -i)
+        [ -z "$gname" -o $# -lt -3 ] && lum::help::usage
+        local incName="$(lum::var::id "$prefix$2$suffix" $case)"
+        local slice="$3"
+        if [ "$(lum::var::type $incName)" = "-a" ]; then
+          local -n incGroup="$incName"
+          group+=("${incGroup[@]:$slice}")
+        fi
+        shift 3
+      ;;
+      -P)
+        prefix="$2"
+        [ "$prefix" = '-' ] && prefix=
+        shift 2
+      ;;
+      -S)
+        suffix="$2"
+        [ "$suffix" = '-' ] && suffix=
+        shift 2
+      ;;
+      --cs)
+        case=$CS
+        shift
+      ;;
+      --uc)
+        case=$UC
+        shift
+      ;;
+      --lc)
+        case=$LC
+        shift
+      ;;
+      -t)
+        lum::err "help tags are dead; help groups reign!"
+      ;;
+      -d)
+        prefix="LUM_FN_HELP_"
+        suffix=
+        case=$UC
+        shift
+      ;;
+      -D)
+        prefix=
+        suffix=
+        case=$CS
+        shift
+      ;;
+      *)
+        [ -z "$gname" ] && lum::help::usage
+        group+=("$1")
+        shift
+      ;;
+    esac
+  done  
 }
 
 lum::fn lum::use::load-subs
@@ -235,17 +399,25 @@ lum::use::load-subs() {
 
 ### Setup and registration
 
-lum::fn::helpTags '*' 0 5 1 3 2 0
+#lum::fn::helpTags '*' 0 5 1 3 2 0
+#lum::fn::helpTags 'lum::fn::help' 0 7
+
+lum::fn::help -d -f '*' \
+  -m 0 default \
+    fmt-pre param val syntax fmt-end \
+  -m 1 usage \
+    fmt-pre arg opt syntax \
+  -m 2 summary \
+    fmt-pre
+  -g more -i default 0:4 -i usage 1 fmt-end
 
 lum::fn lum::fn 1
-lum::fn lum::var 1 -t 0 7
+lum::fn lum::var 5 -h 0 more
 
 ### Extra documentation
 
-lum::fn lum::fn.flags 2
-#$ `{int}`
-#
-# Bitwise flags modifying function/help behaviour.
+lum::fn lum::fn.flags 6
+#$ - Help text settings (bitwise flags)
 #
 # ``1``    The help text must start with an extended usage line,
 #        including the officially registered function name.
@@ -259,10 +431,8 @@ lum::fn lum::fn.flags 2
 #
 #: lum::fn.flags
 
-lum::fn lum::fn.defs 2
-#$ `{*}`
-#
-# Extra definition options for the ``lum::fn`` function.
+lum::fn lum::fn.defs 6
+#$ - Extra lum::fn arguments
 #
 # Each of these has a specific number of arguments that MUST be passed.
 # You can specify as many options as you like, as long as the argument
@@ -270,21 +440,74 @@ lum::fn lum::fn.defs 2
 # the target function that will be called with the arguments. The ``F``
 # symbol refers to the ((funcname)) parameter.
 #
-# ((-a))   `{(3)}` → ``lum::fn::alias F aname opts list``
-# ((-A))   `{(2)}` → ``lum::fn::alias F aname group``
-# ((-t))   `{(2)}` → ``lum::fn::helpTags F mode tags``
+# ((-a))   `{(3)}` → ``lum::fn::alias F $1{name} $2{opts} $3{list}``
+# ((-A))   `{(2)}` → ``lum::fn::alias F $1{aname} $2{group}``
+# ((-h))   `{(2)}` → ``lum::fn::help -d -f F -m $1{mode} $2{group}``
+# ((-H))   `{(2)}` → ``lum::fn::help -f F -m $1{mode} '+' $2{args}``
+#                  The ((args)) should be a quoted string of additional
+#                  arguments separated by whitespace.
 #
 #: lum::fn.defs
 
-lum::fn lum::fn.opts 2 -t 0 7
-#$ `{*}`
+lum::fn lum::fn.opts 6 -h 0 more
+#$ - Advanced lum::fn options
 #
-# Options to change function definition settings.
+# ``-S <<int>>``     Callback levels to source file (default ``1``)
+# ``-R <<int>>``     Callback levels to register func (default ``0``)
 #
-# ((-C))         <<int>>    The number of call back levels to find the
-#                     file with the actual function definition.
-#                     Default is ``1`` if not specified.
-# ((--from))     <<str>>    The path to the actual source file.
-#                     Obviously this overrules the ((-C)) option.
+# ``--src <<str>>``  Path to source file (overrides ``-S``)
+# ``--reg <<str>>``  Name of register func (overrides ``-R``)
 #
 #: lum::fn.opts
+
+lum::fn lum::var.args 6 -h 0 more
+#$ - Regular arguments for lum::var
+#
+# <<var>>                → Declare variable ((var)) with no initial value. 
+#                        Not supported by ``-n`` mode.
+#
+# <<var>> <<op>> <<val>>     → Declare variable ((var)) with value ((val)).
+#                        Not supported by ``-a -A`` modes.
+#
+# The whitespace between ((var)), ((op)), and ((val)) is REQUIRED.
+# Using `{""}` quotes around ((val)) is highly RECOMMENDED.
+#
+# Supported ((op)) values:
+#
+# ``=``    → Direct assignment of ((val)) value to the ((var)) variable.
+# ``=?``   → Only assign ((val)) if ((var)) is not already set.
+#
+#: lum::var.args
+
+lum::fn lum::var.args-a 6 -h 0 more
+#$ - Arguments for $.syntax(-a=) mode in lum::var
+#
+# <<val>>    → Add ((val)) to context array.
+#
+#: lum::var.args-a
+
+lum::fn lum::var.args-A 6 -h 0 more
+#$ - Arguments for $.syntax(-A=) mode in lum::var
+#
+# <<key>> <<op>> <<val>> → Set context array key ((key)) to value ((val)).
+#
+# See ``lum::var.args`` for a description of ((op)) values.
+#
+#: lum::var.args-A
+
+lum::fn lum::fn::help.opts 6 -h 0 more
+#$ - More options for lum::fn::help
+#
+# ``-P <<prefix>>``         Following group variables prefixed with this.
+# ``-S <<suffix>>``         Following group variables suffixed with this.
+# ``--cs``                Following group names are case sensitive.
+# ``--uc``                Following group names are forced to uppercase.
+# ``--lc``                Following group names are forced to lowercase.
+#
+# ``-M <<mode>>``           Get the ((fn)):((mode)) group variable name.
+#                       Output full variable name to ``STDOUT`` and return.
+#
+# ``-d``                   Following groups are built-in defaults.
+# ``-D``                   Clear ``-d`` settings.
+#
+#: lum::fn::help.opts

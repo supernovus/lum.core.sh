@@ -121,7 +121,8 @@ lum::fn lum::var::mergeMaps
 #           Latter sources with duplicate keys will overwrite earlier ones.
 #
 lum::var::mergeMaps() {
-  [ "$(lum::var::type "$1")" != "-A" ] && err "dest var must be -A"
+  [ $# -lt 2 ] && lum::help::usage
+  [ "$(lum::var::type "$1")" != "-A" ] && lum::help::usage
   local -n mapDestVar="$1"
   shift
 
@@ -132,6 +133,73 @@ lum::var::mergeMaps() {
       local -n mapSrcVar="$1"
       for varKey in "${!mapSrcVar[@]}"; do
         mapDestVar[$varKey]="${mapSrcVar[$varKey]}"
+      done
+    fi
+    shift
+  done
+}
+
+lum::fn lum::var::rmFrom
+#$ [[options]] <<varname>> <<value...>>
+#
+# Remove value(s) from an array (-a) variable
+# Does NOT work with associative array (-A) variables!
+#
+# ((varname))     The name of the array variable.
+# ((value))       One or more values to be removed.
+#
+# ((options))     Named options for advanced features:
+#
+# ``-i``        Reindex the array (if you care about consecutive index keys).
+# ``-r``        ((value)) is a RegExp to match rather than a single value.
+#
+lum::var::rm() {
+  local -i reindex=0 isRE=0
+
+  while [ $# -gt 0 ]; do
+    case "$1" in 
+      -i)
+        reindex=1
+        shift
+      ;;
+      -r)
+        isRE=1
+        shift
+      ;;
+      *)
+        break
+      ;;
+    esac
+  done
+
+  [ $# -lt 2 ] && lum::help::usage
+
+  [ "$(lum::var::type "$1")" != "-a" ] && lum::help::usage
+  local findVal curVal curKey
+
+  local -n theArray="$1"
+  shift
+
+  while [ $# -gt 0 ]; do
+    findVal="$1"
+    if [ $reindex -eq 1 ]; then
+      local -a newArray=()
+      for curVal in "${theArray[@]}"; do
+        if [ $isRE -eq 1 ]; then
+          [[ $curVal =~ $findVal ]] || newArray+=("$curVal")
+        else
+          [ "$curVal" = "$findVal" ] || newArray+=("$curVal")
+        fi
+      done
+      theArray=("${newArray[@]}")
+    else
+      for curKey in "${!theArray[@]}"; do
+        curVal="${theArray[$curKey]}"
+        if [ $isRE -eq 1 ]; then
+          [[ $curVal =~ $findVal ]] && unset "theArray[$curKey]"
+        else
+          [ "$curVal" = "$findVal" ] && unset "theArray[$curKey]"
+        fi
       done
     fi
     shift
@@ -170,4 +238,36 @@ lum::var::debug() {
     return 1
   fi
   return 0
+}
+
+lum::fn lum::var::id
+#$ <<string>> [[case=0]]
+#
+# Make any string into a valid variable identifier
+# 
+# ((string))        The input string
+#
+# ((case))          How to handle identifier letter case.
+#               `` 0`` = Case sensitive; don't change case at all.
+#               `` 1`` = Force identifier to uppercase.
+#               ``-1`` = Force identifier to lowercase.
+#
+lum::var::id() {
+  local restore="$(shopt -p extglob)"
+  shopt -s extglob
+  local ident="${1//+([^[:word:]])/_}"
+  ident="${ident%_}"
+  $restore
+
+  local -i csm="${2:-0}"
+  case "$csm" in 
+    1)
+      ident="${ident^^}"
+    ;;
+    -1)
+      ident="${ident,,}"
+    ;;
+  esac
+
+  echo "$ident"
 }

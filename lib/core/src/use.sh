@@ -106,7 +106,7 @@ lum::use::-conf() {
   done
   . "$conf"
   for A in "${LUM_CONF_ALIASES[@]}"; do
-    unset "$A"
+    unset -f "$A"
   done
 }
 

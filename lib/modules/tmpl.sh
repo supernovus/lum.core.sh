@@ -1,59 +1,98 @@
 #@lib: lum::tmpl
 #@desc: A cheap template engine
 
-declare -gA LUM_TMPL_VARS
+declare -gA LUM_TMPL_OPTS=(\
+  [file]='-' \
+  [bls]='\{\{' \
+  [ble]='\}\}' \
+)
 
 lum::fn lum::tmpl
-#$ [[flags=0]] [[filename=STDIN]]
+#$ [[optvar]]
 #
-# Parse a file (or ``STDIN``) for template values.
+# Parse a template.
 #
-# Template statements are enclosed in `{{\\{ }}}` brackets.
+# If the template block content starts with a ``$`` character, it's
+# a variable to echo. Anything else is considered a function to run.
+# The ``STDOUT`` from the variable or function will be used as the 
+# replacement for the block.
+#
+# ((optvar))      The name of a ``-A`` var of options.
+#             See ``lum::tmpl.opts`` for details.
 #
 lum::tmpl() {
-  local _flags="${1:-0}" _filename="${2:--}" 
-  local _pattern="(.*?)\{\{\s*(.*?)\}\}(.*)" 
-  local _text="$(cat $_filename)" _k _v _e
-  local -n TMPL=LUM_TMPL_VARS
+  local -A __
+  lum::var::mergeMaps __ LUM_TMPL_VARS $@
 
-  for _k in "${!TMPL[@]}"; do
-    _v="${TMPL[$_k]}"
-    local $_k="$_v"
+  __[re]="(.*?)${__[bls]}\s*(.*?)${__[ble]}(.*)"
+
+  __[text]="$(cat ${__[file]})" 
+
+  if [ -n "${__[vars]}" -a "$(lum::var::type "${__[vars]}")" = "-A" ]; then
+    if [ -n "${__[varsref]}" ]; then
+      local _vr="$(lum::var::id ${__[varsref]})"
+      [ "$_vr" = '__' ] && lum::err "'__' is a reserved name"
+      local -n $_vr="${__[vars]}"
+      unset _vr
+    else
+      local -n _vs="${__[vars]}"
+      local _k _v
+      for _k in "${!_vs[@]}"; do
+        _k="$(lum::var::id $_k)"
+        _v="${_vs[$_k]}"
+        local $_k="$_v"
+      done
+      unset _k _v
+    fi
+  fi
+
+  if [ -n "${__[exts]}" ]; then
+    local _te
+    for _te in ${__[exts]}; do
+      lum::tmpl::+$_te
+    done
+    unset _te
+  fi
+
+  while [[ ${__[text]} =~ ${__[blockre]} ]]; do
+		__[line]="${BASH_REMATCH[2]}"
+		[ "${__[line]:0:1}" = '$' ] && __[line]="echo ${__[line]}"
+		__[line]="$(eval ${__[line]})"
+    __[text]="${BASH_REMATCH[1]}${__[line]}${BASH_REMATCH[3]}"
   done
-  unset _k _v
 
-  while [[ $_text =~ $_pattern ]]; do
-		_e="${BASH_REMATCH[2]}"
-		[ "${_e:0:1}" = '$' ] && _e="echo $_e"
-		_e="$(eval $_e)"
-    _text="${BASH_REMATCH[1]}${_e}${BASH_REMATCH[3]}"
-  done
-
-  echo "$_text"
+  echo "${__[text]}"
 }
 
-lum::fn lum::tmpl::set
-#$ <<key1>> <<val1>> `{...}`
+lum::fn lum::tmpl.opts 6
+#$ - Common tmpl settings
 #
-# Set template variables.
+#  Option       Default          Description
 #
-# Can specify any number of key/value pairs.
-# Just make sure they're matched.
-#
-lum::tmpl::set() {
-  [ $# -lt 2 ] && lum::help::usage
-  while [ $# -gt 0 ]; do
-    LUM_TMPL_VARS[$1]="$2"
-    shift 
-    shift
-  done
-}
+#  ``file``       ``-``              Filename to parse, ``-`` is ``STDIN``.
+#  ``bls``        ``\{\{``           RegExp for the start of a block.
+#  ``ble``        ``\}\}``           RegExp for the end of a block.
+#  ``vars``       ``''``             Name of a ``-A`` map of template vars.
+#                                If left blank, no template vars are used.
+#  ``varsref``    ``''``             Name to export ``vars`` reference to.
+#                                If left blank, export a separate variable 
+#                                for every key in the ``vars`` array.
+# ``exts``        ``''``             Space-separated list of extensions.
+#                                ``if`` → Adds ``IF ...`` ``ELSE`` ``ENDIF``
+#: lum::tmpl.opts
 
-lum::fn lum::tmpl::reset 
-#$ `{--}`
-#
-# Reset template variables to initial state.
-#
-lum::tmpl::reset() {
-  LUM_TMPL_VARS=()
+## Private extension for lum::tmpl;
+lum::tmpl::+if() {
+  __[ifre]="(.*?)${__[bls]}\s*IF\s+(.*?)${__[ble]}(.*?)${__[bls]}"
+  __[ifre]+="(ELSE${__[ble]}(.*?)${__[bls]})?ENDIF${__[ble]}(.*)"
+
+  while [[ ${__[text]} =~ ${__[ifre]} ]]; do
+    eval "${BASH_REMATCH[2]}" >/dev/null
+    if [ $? -eq 0 ]; then
+      __[line]="${BASH_REMATCH[3]}"
+    else
+      __[line]="${BASH_REMATCH[5]}"
+    fi
+    __[text]="${BASH_REMATCH[1]}${__[line]}${BASH_REMATCH[6]}"
+  done
 }

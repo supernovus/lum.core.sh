@@ -22,7 +22,6 @@ LUM_HELP_TOPICS_OPTS[max]=-1
 LUM_HELP_TOPICS_OPTS[sort]=1
 LUM_HELP_TOPICS_OPTS[follow]=0
 
-declare -gr LUM_HELP_START_FN="lum::fn"
 declare -gr LUM_HELP_START_MARKER="#$"
 declare -gr LUM_HELP_END_MARKER="#:"
 
@@ -44,26 +43,36 @@ lum::fn lum::help
 lum::help() {
   [ $# -lt 1 ] && lum::help::usage
   local prefind  dName fName="${1:-0}" S
-  local -i want=${2:-0}
+  local -i want="${2:-0}" FS=0 SU=0
   local err="${LUM_THEME[error]}"
   local end="${LUM_THEME[end]}"
-  local -i SF=1 EF=2 US=4 FS=0
+  local -ir SF=1 EF=2 US=4 WA=0 WU=1 WS=2
 
   [ "$fName" = "0" ] && fName="${FUNCNAME[1]}"
 
   [ -n "${LUM_ALIAS_FN[$fName]}" ] && fName="${LUM_ALIAS_FN[$fName]}"
   
+  srcfile="${LUM_FN_FILES[$fName]}"
+
+  if [ -z "$srcfile" -o ! -f "$srcfile" ]; then
+    echo "function '$err$fName$end' not recognized" >&2
+    return 1
+  fi
+  
   local -i flags="${LUM_FN_FLAGS[$fName]:-0}"
   lum::flag::is $flags $SF && FS=1
+  lum::flag::is $flags $US && SU=1
 
-  local usageTags _tk="$want|$fName" _ak="$want|*"
+  local -n HTAGS="LUM_FN_HELP_TAGS"
+  local usageDefs usageTags wantTags _tk="$want|$fName" _ak="$want|*"
+
   local wantTags="${LUM_FN_HELP_TAGS[$_tk]:-${LUM_FN_HELP_TAGS[$_ak]}}"
 
-  if [ "$want" = 1 ]; then 
+  if [ "$want" = $WU ]; then 
     usageTags="$wantTags" 
   else 
-    _tk="1|$fName"
-    _ak="1|*"
+    _tk="$WU|$fName"
+    _ak="$WU|*"
     usageTags="${LUM_FN_HELP_TAGS[$_tk]:-${LUM_FN_HELP_TAGS[$_ak]}}"
   fi
 
@@ -76,19 +85,13 @@ lum::help() {
   if [ $FS -eq 1 ]; then
     prefind="${LUM_HELP_START_MARKER} $fName"
   else
-    prefind="$LUM_HELP_START_FN $fName"
+    local regfn="${LUM_FN_REGFN[$fName]}"
+    prefind="$regfn $fName"
   fi
 
-  LFILE="${LUM_FN_FILES[$fName]}"
+  #echo "<help> fName='$fName' srcfile='$srcfile'"
 
-  if [ -z "$LFILE" -o ! -f "$LFILE" ]; then
-    echo "function '$err$fName$end' not recognized" >&2
-    return 1
-  fi
-
-  #echo "<help> fName='$fName' LFILE='$LFILE'"
-
-  S=$(grep -nm 1 "^$prefind" "$LFILE" | cut -d: -f1)
+  S=$(grep -nm 1 "^$prefind" "$srcfile" | cut -d: -f1)
 
   if [ -z "$S" ]; then
     echo "no help definition found for '$err$fName$end'" >&2
@@ -97,7 +100,7 @@ lum::help() {
 
   [ $FS -eq 0 ] && ((S++))
 
-  if [ "$want" = 2 ]; then
+  if [ "$want" = $WS ]; then
     local start
     if lum::flag::is $flags $US; then 
       start="$LUM_HELP_START_MARKER"
@@ -105,11 +108,14 @@ lum::help() {
       start='#'
       ((S+=2))
     fi
-    sed -n "${S}{s/^${start}\s*//;p}" "$LFILE" | lum::help::tmpl $wantTags
+    local sexp="s/^${start}\s*//"
+    sexp+=";s/^${fName}\s*//"
+    sexp+=";s/^-\s*//"
+    sed -n "${S}{$sexp;p}" "$srcfile" | lum::help::tmpl $wantTags
     return 0
   fi
 
-  local output="$(sed -n "${S}{s/$LUM_HELP_START_MARKER\s*/$dName/;p}" "$LFILE")"
+  local output="$(sed -n "${S}{s/$LUM_HELP_START_MARKER\s*/$dName/;p}" "$srcfile")"
   [ $FS -eq 1 -a -n "$dName" ] && output="${output/$fName}"
   echo "$output" | lum::help::tmpl $usageTags
   [ "$want" = 1 ] && return 0
@@ -120,23 +126,24 @@ lum::help() {
   if lum::flag::is $flags $EF; then 
     suffind="${LUM_HELP_END_MARKER} $fName"
   else 
-    suffind="${fName}()"
+    suffind="${fName}\s*()"
   fi
-  E=$(grep -nm 1 "^$suffind" "$LFILE" | cut -d: -f1)
+  E=$(grep -nm 1 "^$suffind" "$srcfile" | cut -d: -f1)
 
   if [ -n "$E" ]; then
     ((E--))
-    sed -n "${S},${E}{s/^#//;p}" "$LFILE" | lum::help::tmpl $wantTags
+    sed -n "${S},${E}{s/^#//;p}" "$srcfile" | lum::help::tmpl $wantTags
   else
     output=""
     local line
     while true; do
-      line="$(sed -n "${S}p" "$LFILE")"
+      line="$(sed -n "${S}p" "$srcfile")"
       [ "${line:0:1}" != "#" ] && break
-      output+="${line:1}\n"
+      output+="${line:1}"
+      output+=$'\n'
       ((S++))
     done
-    echo -e "$output" | lum::help::tmpl $wantTags
+    echo "$output" | lum::help::tmpl $wantTags
   fi
 
   return 0
@@ -242,186 +249,6 @@ lum::help::usage() {
   [ $errCode -gt -1 ] && exit $errCode
 }
 
-lum::fn lum::help::tmpl
-#$ <<tags>>
-#
-# Parse ``STDIN`` for help document tags.
-# Uses loaded theme colours when supported by the terminal.
-#
-# ((tags))  Bitwise flags for what tags to allow.
-#       See ``lum::help::tmpl.tags`` for details.
-# 
-lum::help::tmpl() {
-  local tags="${1:-0}"
-  local SYN=1 ARG=2 VAL=4 VAR=8 EXT=16
-
-  local argPattern='(.*?)<<(\w+)(\.\.\.)?>>(.*)'
-  local optPattern='(.*?)\[\[(\w+)(=)?(\w+)?(\.\.\.)?\]\](.*)'
-  local parPattern='(.*?)\(\((.*?)\)\)(.*?)'
-  local synPattern='(.*?)`\{(.*?)\}`(.*)'
-  local valPattern='(.*?)``(.*?)``(.*)'
-  local varPattern='(.*?)\$\{(\w+)\}(.*)'
-  local extPattern='(.*?)@([<>])(\S+?);(.*)'
-  local padPattern='(.*?)@(\d+)\((.*?)\)(.*)'
-  local bldPattern='(.*?)\*\*(.*?)\*\*(.*)'
-  local escPattern='(.*?)\\\\(.*)'
-  local bsePattern='(.*?)\\\/\/\\(.*)'
-
-  local text="$(cat -)" before after arg eq def param rep bs='\\'
-
-  local bc="${LUM_THEME[help.bold]}"
-  local sc="${LUM_THEME[help.syntax]}"
-  local ac="${LUM_THEME[help.arg]}"
-  local oc="${LUM_THEME[help.opt]}"
-  local dc="${LUM_THEME[help.def]}"
-  local pc="${LUM_THEME[help.param]}"
-  local vc="${LUM_THEME[help.value]}"
-  local er="${LUM_THEME[error]}"
-  local ec="${LUM_THEME[end]}"
-
-  if lum::flag::is $tags $EXT; then
-    while [[ $text =~ $extPattern ]]; do 
-      before="${BASH_REMATCH[1]}"
-      after="${BASH_REMATCH[4]}"
-      arg="${BASH_REMATCH[3]}"
-      eq="${BASH_REMATCH[2]}"
-      text="$before$after"
-      if lum::fn::is "$arg"; then
-        if [ "$eq" = ">" ]; then
-          text="$(echo "$text" | $arg $tags)"
-        elif [ "$eq" = "<" ]; then
-          text="$($arg $tags "$text")"
-        fi
-      fi
-    done
-  fi
-
-  if lum::flag::is $tags $VAR; then
-    while [[ $text =~ $varPattern ]]; do
-      before="${BASH_REMATCH[1]}"
-      after="${BASH_REMATCH[3]}"
-      param="${!BASH_REMATCH[2]}"
-      text="$before$param$after"
-    done
-  fi
-
-  if lum::flag::is $tags $ARG; then
-    while [[ $text =~ $argPattern ]]; do 
-      before="${BASH_REMATCH[1]}"
-      after="${BASH_REMATCH[4]}"
-      arg="${BASH_REMATCH[2]}"
-      rep="${BASH_REMATCH[3]}"
-      param="$sc<$ac$arg$sc"
-      [ -n "$rep" ] && param="$param$rep"
-      param="$param>$ec"
-      text="$before$param$after"
-    done
-
-    while [[ $text =~ $optPattern ]]; do 
-      before="${BASH_REMATCH[1]}"
-      after="${BASH_REMATCH[6]}"
-      arg="${BASH_REMATCH[2]}"
-      eq="${BASH_REMATCH[3]}"
-      def="${BASH_REMATCH[4]}"
-      rep="${BASH_REMATCH[5]}"
-      param="$sc[$oc$arg$sc"
-      [ "$eq" = "=" -a -n "$def" ] && param="$param$eq$dc$def$sc"
-      [ -n "$rep" ] && param="$param$rep"
-      param="$param]$ec"
-      text="$before$param$after"
-    done
-  fi
-
-  if lum::flag::is $tags $VAL; then
-    while [[ $text =~ $parPattern ]]; do 
-      before="${BASH_REMATCH[1]}"
-      after="${BASH_REMATCH[3]}"
-      arg="${BASH_REMATCH[2]}"
-      param="$pc$arg$ec"
-      text="$before$param$after"
-    done
-
-    while [[ $text =~ $valPattern ]]; do 
-      before="${BASH_REMATCH[1]}"
-      after="${BASH_REMATCH[3]}"
-      arg="${BASH_REMATCH[2]}"
-      param="'$vc$arg$ec'"
-      text="$before$param$after"
-    done
-  fi
-
-  if lum::flag::is $tags $SYN; then
-    while [[ $text =~ $synPattern ]]; do 
-      before="${BASH_REMATCH[1]}"
-      after="${BASH_REMATCH[3]}"
-      arg="${BASH_REMATCH[2]}"
-      param="$sc$arg$ec"
-      text="$before$param$after"
-    done
-
-    while [[ $text =~ $bldPattern ]]; do 
-      before="${BASH_REMATCH[1]}"
-      after="${BASH_REMATCH[3]}"
-      arg="${BASH_REMATCH[2]}"
-      param="$bc$arg$ec"
-      text="$before$param$after"
-    done
-
-    while [[ $text =~ $padPattern ]]; do
-      before="${BASH_REMATCH[1]}"
-      after="${BASH_REMATCH[4]}"
-      rep="${BASH_REMATCH[2]}"
-      arg="${BASH_REMATCH[3]}"
-      param="$(lum::str::pad $rep "$arg")"
-      text="$before$param$after"
-    done
-
-    while [[ $text =~ $escPattern ]]; do
-      before="${BASH_REMATCH[1]}"
-      after="${BASH_REMATCH[2]}"
-      text="$before$after"
-    done
-
-    while [[ $text =~ $bsePattern ]]; do
-      before="${BASH_REMATCH[1]}"
-      after="${BASH_REMATCH[2]}"
-      text="$before$bs$after"
-    done
-  fi
-
-  echo "$text"
-}
-
-lum::fn lum::help::tmpl.tags 2
-#$ `{int}`
-#
-# The ((flags)) argument of ``lum::help::tmpl``
-#
-# ``1``  = Enable `{`\\{ Misc syntax }\\`}`, `{*\\* bold text *\\*}`, 
-#        and `{@\\int(pad text)}` tags. Enables `{\//\}` escapes.
-# ``2``  = Enable `{<\\< argument >\\>}` and `{[\\[ option ]\\]}` tags.
-# ``4``  = Enable `{(\\( parameter )\\)}` and `{`\\` value `\\`}` tags.
-# ``8``  = Enable `{$\\{variable}\\}` tags.
-# ``16`` = Enable `{@\\>pipeCmd;}` and `{@\\<passCmd;}` extension tags.
-#        See ``lum::help::tmpl.exts`` for details.
-#
-#: lum::help::tmpl.tags
-
-lum::fn lum::help::tmpl.exts 2
-#$ `{...}`
-#
-# Extension tags for ``lum::help::tmpl``
-#
-# **@\\>cmd;**  Template is piped (``STDIN``) to the ``cmd`` function,
-#         which is passed ((tags)) as its only argument.
-#
-# **@\\<cmd;**  The ``cmd`` function is passed ((tags)) and then the template
-#         text as two separate arguments.
-#
-# In both cases, the output (``STDOUT``) will be the new template text.
-#
-#: lum::help::tmpl.exts
-
 lum::fn lum::help::list
 #$ <<list>> [[display]] [[fullDisp=0]]
 #
@@ -455,7 +282,7 @@ lum::help::list() {
   local -i pad="${listOpts[pad]}"
   local -i sort="${listOpts[sort]}"
 
-  local ic="${LUM_THEME[help.list.item]}"
+  local ic="${LUM_THEME[help:list.item]}"
   local sc="${LUM_THEME[help.syntax]}"
   local pc="${LUM_THEME[help.param]}"
   local ec="${LUM_THEME[end]}"
@@ -491,9 +318,9 @@ lum::help::list() {
     if [ $max -gt 0 -a $L -gt $max ]; then
       #lum::warn "+wrapping: max=$max; lc=${L}"
       echo "$ic$C"
-      echo "$sc$nl$sep$U"
+      echo "${hc[s]}$nl$sep$U"
     else
-      echo "$ic$C$sc$sep$U"
+      echo "$ic$C${hc[s]}$sep$U"
     fi
   done
 }

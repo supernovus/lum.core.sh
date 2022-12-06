@@ -112,7 +112,7 @@ lum::fn lum::help::cli.opts 6 -t 0 7 -a lum-help-opts 1 0
 # ``-L <<libname>>``      Add a library from a package.
 #
 # ``-u``                Show only the usage line.
-#                     Use doubled ((``-uu``)) to show only the summary line.
+#                     Use doubled (``-uu``) to show only the summary line.
 #
 # ``-l``                Show a list of help topics and exit.
 #                     Use doubled (``-ll``) to show ONLY aliases.
