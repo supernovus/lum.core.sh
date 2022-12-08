@@ -1,7 +1,7 @@
 #@lib: lum::core /fn
 #@desc: Submodule for functions related to functions
 
-lum::fn lum::fn::run 0 -t 0 7
+lum::fn lum::fn::run 0 -h 0 more
 #$ <<mode>> `{modeArgs...}` <<name>> `{funcArgs...}`
 #
 # Call a function and pass it all other parameters.
@@ -63,8 +63,7 @@ lum::fn::run() {
 ## Private sub-function for lum::fn::run
 lum::fn::run-err() {
   local err="${LUM_THEME[error]}" end="${LUM_THEME[end]}"
-  echo "Unrecognized command '$err$1$end' specified" >&2
-  exit 1
+  lum::err "Unrecognized command '$err$1$end' specified" 1
 }
 
 lum::fn lum::fn::copy

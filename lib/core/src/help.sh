@@ -6,26 +6,33 @@
 [ -z "$LUM_USAGE_STACK" ] && LUM_USAGE_STACK=0
 [ -z "$LUM_WARN_LVL" ] && LUM_WARN_LVL=-1
 [ -z "$LUM_ERR_LVL" ] && LUM_ERR_LVL=2
-
-declare -gA LUM_HELP_LIST_OPTS
-LUM_HELP_LIST_OPTS[pad]=-1
-LUM_HELP_LIST_OPTS[max]=0
-LUM_HELP_LIST_OPTS[sort]=0
-LUM_HELP_LIST_OPTS[follow]=1
-LUM_HELP_LIST_OPTS[sep]=" → "
-LUM_HELP_LIST_OPTS[prefix]=" "
-LUM_HELP_LIST_OPTS[suffix]=" "
-LUM_HELP_LIST_OPTS[nl]="  "
-
-declare -gA LUM_HELP_TOPICS_OPTS
-LUM_HELP_TOPICS_OPTS[max]=-1
-LUM_HELP_TOPICS_OPTS[sort]=1
-LUM_HELP_TOPICS_OPTS[follow]=0
-
-declare -gr LUM_HELP_START_MARKER="#$"
-declare -gr LUM_HELP_END_MARKER="#:"
+[ -z "$LUM_ERR_EXIT" ] && LUM_ERR_EXIT=1
 
 declare -gA LUM_THEME
+
+lum::var -P LUM_HELP_ \
+  START_MARKER = '#$' \
+  END_MARKER   = '#:' \
+  -A= LIST_OPTS \
+    pad    = -1 \
+    max    = 0 \
+    sort   = 0 \
+    follow = 1 \
+    sep    = " → " \
+    prefix = " " \
+    suffix = " " \
+    nl     = "  " \
+    - \
+  -A= TOPICS_OPTS \
+    max    = -1 \
+    sort   = 1 \
+    follow = 0 \
+    - \
+  -A= WANT \
+    all     = 0 \
+    usage   = 1 \
+    summary = 2 \
+    -
 
 lum::fn lum::help
 #$ <<name>> [[mode=0]]
@@ -34,6 +41,7 @@ lum::fn lum::help
 #
 # ((name))      Name of the function (e.g. ``lum::help``)
 #           If set to ``0``, uses the name of the calling function.
+#           Can specify a sub-topic using a comma (e.g ``lum::help,defs``).
 #
 # ((mode))      What help text we want to return:
 #           ``0`` = Return the entire help text.
@@ -42,15 +50,25 @@ lum::fn lum::help
 #
 lum::help() {
   [ $# -lt 1 ] && lum::help::usage
-  local prefind  dName fName="${1:-0}" S
-  local -i want="${2:-0}" FS=0 SU=0
+
+  local prefind S tName="${1:-0}" fName sName lName dName rName
+  local -i want="${2:-0}" FS=0 FE=0 SU=0
   local err="${LUM_THEME[error]}"
   local end="${LUM_THEME[end]}"
-  local -ir SF=1 EF=2 US=4 WA=0 WU=1 WS=2
+  local -n WANT=LUM_HELP_WANT
 
-  [ "$fName" = "0" ] && fName="${FUNCNAME[1]}"
+  if [ "$tName" = "0" ]; then 
+    fName="${FUNCNAME[1]}"
+    tName="$fName"
+  else
+    fName="${tName/,*}"
+    [ "$fName" != "$tName" ] && sName="${tName/*,}"
+  fi
 
-  [ -n "${LUM_ALIAS_FN[$fName]}" ] && fName="${LUM_ALIAS_FN[$fName]}"
+  if [ -n "${LUM_ALIAS_FN[$fName]}" ]; then
+    rName="$fName"
+    fName="${LUM_ALIAS_FN[$fName]}"
+  fi
   
   srcfile="${LUM_FN_FILES[$fName]}"
 
@@ -59,72 +77,107 @@ lum::help() {
     return 1
   fi
   
-  local -i flags="${LUM_FN_FLAGS[$fName]:-0}"
-  lum::flag::is $flags $SF && FS=1
-  lum::flag::is $flags $US && SU=1
+  local -n HTAGS="LUM_FN_HELP_TAGS" 
+  local usageTags wantTags
 
-  local -n HTAGS="LUM_FN_HELP_TAGS"
-  local usageDefs usageTags wantTags _tk="$want|$fName" _ak="$want|*"
+  if [ -n "$sName" ]; then
+    ## Sub-topics are treated differently.
+    FS=1 FE=1 SU=1 
+    lName="$fName#$sName"
 
-  local wantTags="${LUM_FN_HELP_TAGS[$_tk]:-${LUM_FN_HELP_TAGS[$_ak]}}"
+    local -a _tkeys=("$sName|$fName" "$want|$fName" "$want|*")
+    local _tk
 
-  if [ "$want" = $WU ]; then 
-    usageTags="$wantTags" 
-  else 
-    _tk="$WU|$fName"
-    _ak="$WU|*"
-    usageTags="${LUM_FN_HELP_TAGS[$_tk]:-${LUM_FN_HELP_TAGS[$_ak]}}"
+    for _tk in "${_tkeys[@]}"; do
+      wantTags="${LUM_FN_HELP[$_tk]}"
+      [ -n "$wantTags" ] && break
+    done
+    usageTags="$wantTags"
+  else
+    local -i flags="${LUM_FN_FLAGS[$fName]:-0}"
+    local _tk="$want|$fName" _ak="$want|*"
+
+    lum::flag::is $flags 1 && FS=1
+    lum::flag::is $flags 2 && FE=1
+    lum::flag::is $flags 4 && SU=1
+
+    lName="$fName"
+    wantTags="${LUM_FN_HELP[$_tk]:-${LUM_FN_HELP[$_ak]}}"
+
+    if [ "$want" = ${WANT[usage]} ]; then 
+      usageTags="$wantTags" 
+    else 
+      _tk="${WANT[usage]}|$fName"
+      _ak="${WANT[usage]}|*"
+      usageTags="${LUM_FN_HELP[$_tk]:-${LUM_FN_HELP[$_ak]}}"
+    fi
   fi
 
+  [ -z "$wantTags" ] && lum::err "invalid help mode '$want' specified"
+
   if [ -n "${LUM_FN_ALIAS[$fName]}" ]; then
-    dName="${LUM_FN_ALIAS[$fName]} "
+    dName="${LUM_FN_ALIAS[$fName]}"
   elif [ $FS -eq 0 ]; then
-    dName="$fName "
+    dName="$fName"
   fi
 
   if [ $FS -eq 1 ]; then
-    prefind="${LUM_HELP_START_MARKER} $fName"
+    prefind="${LUM_HELP_START_MARKER} $lName"
   else
     local regfn="${LUM_FN_REGFN[$fName]}"
     prefind="$regfn $fName"
   fi
 
+  #echo "tName='$tName'; fName='$fName'; sName='$sName' wantTags='$wantTags'" >&2
   #echo "<help> fName='$fName' srcfile='$srcfile'"
 
   S=$(grep -nm 1 "^$prefind" "$srcfile" | cut -d: -f1)
 
   if [ -z "$S" ]; then
-    echo "no help definition found for '$err$fName$end'" >&2
+    echo "no help definition found for '$err$tName$end'" >&2
     return 2
   fi
 
   [ $FS -eq 0 ] && ((S++))
 
-  if [ "$want" = $WS ]; then
+  [ $LUM_HELP_TMPL_INIT -ne 1 ] && lum::help::tmpl--init
+
+  ## Friendly map of settings for template extensions.
+  local -A helpOptions=(\
+    [reqid]="$tName" \
+    [reqfn]="$rName" \
+    [show]="$dName" \
+    [root]="$fName" \
+    [sub]="$sName" \
+    [id]="$lName" \
+    [mode]="$want" \
+  )
+
+  if [ $want = ${WANT[summary]} ]; then
     local start
-    if lum::flag::is $flags $US; then 
+    if [ $SU -eq 1 ]; then 
       start="$LUM_HELP_START_MARKER"
     else
       start='#'
       ((S+=2))
     fi
     local sexp="s/^${start}\s*//"
-    sexp+=";s/^${fName}\s*//"
+    sexp+=";s/^${lName}\s*//"
     sexp+=";s/^-\s*//"
     sed -n "${S}{$sexp;p}" "$srcfile" | lum::help::tmpl $wantTags
     return 0
   fi
 
-  local output="$(sed -n "${S}{s/$LUM_HELP_START_MARKER\s*/$dName/;p}" "$srcfile")"
-  [ $FS -eq 1 -a -n "$dName" ] && output="${output/$fName}"
+  local output="$(sed -n "${S}{s/$LUM_HELP_START_MARKER\s*/$dName /;p}" "$srcfile")"
+  [ $FS -eq 1 -a -n "$dName" ] && output="${output/$lName}"
   echo "$output" | lum::help::tmpl $usageTags
-  [ "$want" = 1 ] && return 0
+  [ $want = ${WANT[usage]} ] && return 0
 
   ((S++))
 
   local suffind E
-  if lum::flag::is $flags $EF; then 
-    suffind="${LUM_HELP_END_MARKER} $fName"
+  if [ $FE -eq 1 ]; then 
+    suffind="${LUM_HELP_END_MARKER} $lName"
   else 
     suffind="${fName}\s*()"
   fi
@@ -157,14 +210,14 @@ lum::fn lum::help::diag
 # ((level))  Starting position in trace.
 #            
 lum::help::diag() {
-  local S=${1:-1} E=${#BASH_SOURCE[@]} L
+  local -i S=${1:-1} E=${#BASH_SOURCE[@]} L
   local mc="${LUM_THEME[diag.func]}"
   local fc="${LUM_THEME[diag.file]}"
   local lc="${LUM_THEME[diag.line]}"
   local ec="${LUM_THEME[end]}"
   local fn sf ln
   ((E--))
-  for L in $(seq $S $E);
+  for (( L=$S; L<$E; L++ ))
   do
     fn="${FUNCNAME[$L]}"
     sf="${BASH_SOURCE[$L]}"
@@ -210,7 +263,14 @@ lum::err() {
   local -i errCode="${2:-1}" DL="${3:-$LUM_ERR_LVL}"
   echo -e "$1" >&2
   [ $DL -gt -1 ] && lum::help::diag $DL >&2
-  [ "$errCode" -gt -1 ] && exit $errCode
+  --lum::exit
+}
+
+## Private function
+--lum::exit() {
+  if [ "$errCode" -gt -1 ]; then 
+    [ "$LUM_ERR_EXIT" = 1 ] && exit $errCode || return $errCode
+  fi
 }
 
 lum::fn lum::help::usage
@@ -246,7 +306,15 @@ lum::help::usage() {
       lum::help::moreinfo >&2
     fi
   fi
-  [ $errCode -gt -1 ] && exit $errCode
+  --lum::exit
+}
+
+lum::help::width() {
+  stty size | cut -d' ' -f2
+}
+
+lum::help::height() {
+  stty size | cut -d' ' -f1
 }
 
 lum::fn lum::help::list
@@ -282,7 +350,7 @@ lum::help::list() {
   local -i pad="${listOpts[pad]}"
   local -i sort="${listOpts[sort]}"
 
-  local ic="${LUM_THEME[help:list.item]}"
+  local ic="${LUM_THEME[help.item]}"
   local sc="${LUM_THEME[help.syntax]}"
   local pc="${LUM_THEME[help.param]}"
   local ec="${LUM_THEME[end]}"
@@ -303,7 +371,7 @@ lum::help::list() {
     sourceList=("${tempList[@]}")
   fi
 
-  [ $max -eq -1 ] && max="$(stty size | cut -d' ' -f2)"
+  [ $max -eq -1 ] && max="$(lum::help::width)"
 
   for K in "${sourceList[@]}"; do
     C="$(lum::str::pad $pad "$pf$K$sf")"

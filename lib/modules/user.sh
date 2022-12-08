@@ -5,7 +5,7 @@
 
 lum::use lum::use::from
 
-lum::fn lum::user::appDir 0 -t 0 13
+lum::fn lum::user::appDir 0
 #$ <<dirname>>
 #
 # Set the app-specific user config sub-directory.
@@ -13,7 +13,7 @@ lum::fn lum::user::appDir 0 -t 0 13
 # This is a sub-directory in the user's home directory that
 # can contain configuration files specific to the app.
 # 
-# This is currently set to ``${LUM_USER_CONF_DIR}``
+# This is currently set to $var(LUM_USER_CONF_DIR);
 #
 lum::user::appDir() {
   [ $# -eq 0 ] && lum::help::usage

@@ -22,11 +22,11 @@ lum::fn lum::tmpl
 #
 lum::tmpl() {
   local -A __
-  lum::var::mergeMaps __ LUM_TMPL_VARS $@
+  lum::var::mergeMaps __ LUM_TMPL_OPTS $@
 
-  __[re]="(.*?)${__[bls]}\s*(.*?)${__[ble]}(.*)"
+  __[blockre]="(.*?)${__[bls]}\s*(.*?)${__[ble]}(.*)"
 
-  __[text]="$(cat ${__[file]})" 
+  [ -z "${__[text]}" ] && __[text]="$(cat ${__[file]})" 
 
   if [ -n "${__[vars]}" -a "$(lum::var::type "${__[vars]}")" = "-A" ]; then
     if [ -n "${__[varsref]}" ]; then
@@ -65,23 +65,37 @@ lum::tmpl() {
 }
 
 lum::fn lum::tmpl.opts 6
-#$ - Common tmpl settings
+#$ - Common settings
 #
-#  Option       Default          Description
+# Option       Default          Description
 #
-#  ``file``       ``-``              Filename to parse, ``-`` is ``STDIN``.
-#  ``bls``        ``\{\{``           RegExp for the start of a block.
-#  ``ble``        ``\}\}``           RegExp for the end of a block.
-#  ``vars``       ``''``             Name of a ``-A`` map of template vars.
-#                                If left blank, no template vars are used.
-#  ``varsref``    ``''``             Name to export ``vars`` reference to.
-#                                If left blank, export a separate variable 
-#                                for every key in the ``vars`` array.
-# ``exts``        ``''``             Space-separated list of extensions.
+# ``text``       ''               The template text to parse.
+#                               If left blank, ``file`` is used instead.
+# ``file``       ``-``              Filename to parse, ``-`` is ``STDIN``.
+# ``bls``        ``\{\{``           RegExp for the start of a block.
+# ``ble``        ``\}\}``           RegExp for the end of a block.
+# ``vars``       ``''``             Name of a ``-A`` map of template vars.
+#                               If left blank, no template vars are used.
+# ``varsref``    ''               Name to export ``vars`` reference to.
+#                               If left blank, export a separate variable 
+#                               for every key in the ``vars`` array.
+# ``exts``        ''              Space-separated list of extensions.
 #                                ``if`` → Adds ``IF ...`` ``ELSE`` ``ENDIF``
 #: lum::tmpl.opts
 
-## Private extension for lum::tmpl;
+#$ lum::tmpl.opts#if - Simple IF statements
+#
+# Currently only supports binary-branch, non-nested conditional statements.
+# Examples using the default ((bls)) and ((ble)) strings for simplicity.
+#
+# $val({{IF ((condition))}});
+# $code(Template text if condition is true);
+# $val({{ELSE}});
+# $code(Template text if condition is false);
+# $val({{ENDIF}});
+# 
+#: lum::tmpl.opts#if
+
 lum::tmpl::+if() {
   __[ifre]="(.*?)${__[bls]}\s*IF\s+(.*?)${__[ble]}(.*?)${__[bls]}"
   __[ifre]+="(ELSE${__[ble]}(.*?)${__[bls]})?ENDIF${__[ble]}(.*)"
@@ -95,4 +109,14 @@ lum::tmpl::+if() {
     fi
     __[text]="${BASH_REMATCH[1]}${__[line]}${BASH_REMATCH[6]}"
   done
+}
+
+lum::fn lum::tmpl::forHelp
+#$ [[name=tmpl]] [[moreopts=0]]
+#
+# Register a help definition using lum::tmpl
+#
+lum::tmpl::forHelp() {
+  local name="${1:-tmpl}" moreopts="${2:-0}"
+  lum::help::def "$name" P- lum::tmpl "$moreopts"
 }

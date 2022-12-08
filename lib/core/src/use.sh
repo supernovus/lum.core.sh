@@ -77,8 +77,7 @@ lum::use() {
           LUM_USE_NAMES[$cacheKey]=1
           LUM_USE_FILES[$libFile]=1
         elif [ $isFatal -eq 1 ]; then
-          echo "Could not find $1 library."
-          exit $LUM_USE_ERRCODE
+          lum::err "Could not find $1 library." $LUM_USE_ERRCODE
         fi
       ;;
     esac
@@ -100,7 +99,7 @@ lum::use::-conf() {
   [ $# -eq 0 ] && lum::help::usage
   local conf="$1" A F
   for A in "${LUM_CONF_ALIASES[@]}"; do
-    lum::fn::is "$A" && echo "function '$F' already exists" && exit $LUM_USE_ERRCODE 
+    lum::fn::is "$A" && lum::warn "function '$F' already exists" && return $LUM_USE_ERRCODE 
     F="${LUM_ALIAS_FN[$A]}"
     [ -n "$F" ] && lum::fn::copy "$F" "$A" 
   done
@@ -108,6 +107,7 @@ lum::use::-conf() {
   for A in "${LUM_CONF_ALIASES[@]}"; do
     unset -f "$A"
   done
+  return 0
 }
 
 lum::fn lum::use::find

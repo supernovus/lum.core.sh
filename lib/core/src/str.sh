@@ -1,20 +1,76 @@
 #@lib: lum::core /str
 #@desc: String utilities
 
-lum::fn lum::str::pad
-#$ <<len>> <<string...>>
+lum::fn lum::str::pad 0 -h 0 more
+#$ [[opts...]] <<len>> <<string...>>
 #
 # Pad a string to a specified length.
 #
-# ((len))     The length the final string should be.
-#
-# ((string))  One or more strings to concat.
+# ((len))     → The length the final string should be.
+# ((string))  → One or more strings to concat.
+# ((opts))    → Options:
+#  $val(-f);         → Add the padding to the front rather than the end.
+#  $val(-c); <<char>>  → Use ((char)) for padding instead of `{space}`.
 #
 lum::str::pad() {
+  local char fmt='%-'
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -c)
+        char="$2"
+        shift 2
+      ;;
+      -f)
+        fmt='%'
+        shift
+      ;;
+      *)
+        break;
+      ;;
+    esac
+  done
+
   [ $# -lt 2 ] && lum::help::usage
-  local len=$1
+  local -i len=$1
+  fmt+="${len}s"
   shift
-  printf "%-${len}s" "$@"
+
+  local string="$@"
+  local padded="$(printf "$fmt" "$string")"
+
+  if [ -n "$char" ]; then 
+    if [ -z "$string" ]; then
+      padded="${padded// /$char}"
+    else
+      local padding="${padded/$string}"
+      padding="${padding// /$char}"
+      [ "${fmt:1:1}" = '-' ] \
+        && padded="$string$padding" \
+        || padded="$padding$string"
+    fi
+  fi
+  
+  echo "$padded"
+}
+
+lum::fn lum::str::repeat
+#$ <<string>> <<times>>
+#
+# Repeat a specific string multiple times.
+#
+# ((string))    → The string we want to repeat.
+# ((times))     → How many times to repeat it.
+#
+lum::str::repeat() {
+  ## Yes, we could just do lum::str::pad -c "$string" "$times" ''
+  ## but this version doesn't require $(subshells) or ${rep/lace/ments}
+  local -i c=0 times="$2"
+  local in="$1" out
+  for ((c=0; c<$times; c++ ))
+  do
+    out+="$in"
+  done
+  echo "$out"
 }
 
 lum::fn lum::str::startsWith

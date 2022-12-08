@@ -1,12 +1,22 @@
 #@lib: lum::core /help_tmpl
 #@desc: Template engine for the help system
 
-lum::var -P LUM_HELP_ -A DEFS THM \
-  DEFS_FMT_PRE DEFS_FMT_END FMT_VARS \
-  -i TMPL_INIT=0
+lum::var -P LUM_HELP_ \
+  -i TMPL_INIT = 0 \
+  -a FMT_ESC \
+  -A DEFS THM FMT_VARS \
+  -A= FMT_HL \
+     b = bold \
+     h = header \
+     i = item \
+     p = param \
+     e = '!' \
+     code = syntax \
+     val = value \
+     -
 
-lum::fn lum::help::def
-#$ <<name>> <<type>> `{...}`
+lum::fn lum::help::def 0 -h 0 more
+#$ <<name>> <<type>> <<handler>> `{...}`
 #
 # Define a help template feature
 #
@@ -17,67 +27,60 @@ lum::fn lum::help::def
 #           If for a type with a tag, this will be the tag name.
 #
 # ((type))      A code determining the handler behaviour.
+#           The first character is the mandatory type code.
+#           Additional characters are optional type modifiers,
+#           and will be parsed in the order specified.
+#
+# ((handler))   The function that will process this feature.
+#           Will have access to a ``tmplOptions`` local var with info
+#           about the def, and any options and/or data associated with it.
 #
 # See also:
 #
-# ``lum::help::def.type``  → The ((type)) values, and additional args.
-# ``lum::help::def.opts``  → The ((optsvar)) arg passed to handlers.
+# $see(,type); → The ((type)) values, and additional args.
+# $see(,opts); → The ((tmplOptions)) available to handlers.
 #
 lum::help::def() {
   [ $# -lt 3 ] && lum::help::usage
-  local dname="$1" type="$2"
-  shift 2
-
-  case "$type" in
-    P|p|M)
-      local -n DEF="LUM_HELP_DEFS"
-      DEF[$dname]="$type $@"
-    ;;
-    m)
-      [ $# -lt 2 ] && lum::help::usage
-      local fname="$1" vname="$2"
-      shift 2
-      declare -gA "$vname"
-      local -n DEF="$vname"
-      DEF[$dname]="$type $fname $@"
-    ;;
-    *)
-      lum::help::usage
-    ;;
-  esac
-
+  local -n DEF="LUM_HELP_DEFS"
+  local dname="$1"
+  shift
+  DEF[$dname]="$@"
 }
 
-lum::fn lum::help::def.type 6 -t 0 7
-#$ - Help template handler types
+#$ lum::help::def#type - Help template handler types
+#
+# ``M``            Match a RegExp, assign value to local ``tmplText`` var.
+#                Def args: <<regexp>> [[data...]]
+#                  If ((data)) args are passed, they'll be available as a
+#                  quoted string via the ``tmplOptions[data]`` variable.
+#                Handler args: <<matches...>> 
+#                No modifiers.
 #
 # ``P``            Pipe help text to ``STDIN``, replace with ``STDOUT``.
-#                Def args: <<handler>> [[metadata...]]
-#                Handler args: <<optsvar>>
+#                Def args: [[moreopts=0]] [[data...]]
+#                  ((moredata)) if non-zero can be the name of a ``-A`` var
+#                  to be merged into the ``tmplOptions`` local var.
+#                No handler args unless added with modifiers.
+#                Modifiers:
+#                  ``-`` → Add ``tmplOptions`` var name to handler args.
+#                  ``+`` → Add ((data)) values to handler args.
 #
 # ``p``            Pass help text, replace with ``STDOUT``.
-#                Def args: <<handler>> [[metadata...]]
-#                Handler args: <<helptext>> <<optsvar>>
+#                Def args and modifiers are same as ``P``.
+#                Handler args: <<helptext>>
 #
-# ``M``            Match a RegExp, replace text with ``STDOUT``.
-#                Def args: <<handler>> <<regexp>> [[metadata...]]
-#                Handler args: <<optsvar>> <<fullmatch>> [[submatches...]]
-#
-# ``m``            A sub-match handler called from a parent ``M`` handler.
-#                Def args: <<handler>> <<defvar>> [[metadata...]]
-#                Handler args: <<optsvar>> [[subvals...]]
-#                The def is stored in the ((defvar)) global variable.
-#
-#: lum::help::def.type
+#: lum::help::def#type
 
-lum::fn lum::help::def.opts 6 -t 0 7
-#$ - Help template handler options
+#$ lum::help::def#opts - Help template handler options
 #
 # Every handler function is passed an ((optsvar)) argument.
 # This argument is the name of a local scope ``-A`` array variable that 
-# contains options and metadata for the handler. TODO: document this further.
+# contains options and metadata for the handler. 
 #
-#: lum::help::def.opts
+# TODO: document this further.
+#
+#: lum::help::def#opts
 
 lum::help::tmpl--init() {
   ## Set up the theme
@@ -85,7 +88,7 @@ lum::help::tmpl--init() {
   LUM_HELP_THM[!]="${LUM_THEME[error]}"
   LUM_HELP_THM[:]="${LUM_THEME[help.syntax]}"
   local tk hk
-  for tk in "${!LUM_THEME}"; do
+  for tk in "${!LUM_THEME[@]}"; do
     if lum::str::startsWith "$tk" 'help.'; then
       hk="${tk#help.}"
       LUM_HELP_THM[$hk]="${LUM_THEME[$tk]}"
@@ -94,36 +97,46 @@ lum::help::tmpl--init() {
 
   ## Set up the default template feature definitions.
   local LHT=lum::help::tmpl
-  lum::help::def var M $LHT::var '(.*?)\$\{(\w+)\}(.*)'
   lum::help::def arg M $LHT::arg '(.*?)<<(\w+)(\.\.\.)?>>(.*)'
   lum::help::def opt M $LHT::opt '(.*?)\[\[(\w+)(=)?(\S+)?(\.\.\.)?\]\](.*)'
-  lum::help::def param M $LHT::param '(.*?)\(\((.*?)\)\)(.*?)'
-  lum::help::def val M $LHT::val '(.*?)``(.*?)``(.*)'
-  lum::help::def syntax M $LHT::syntax '(.*?)`\{(.*?)\}`(.*)'
-
-  local FPRE=LUM_HELP_DEFS_FMT_PRE FEND=LUM_HELP_DEFS_FMT_END FMTF=$LHT::fmt
-
-  lum::help::def fmt-pre M $FMTF '(.*?)\$\.(\w+)\((.*?)\)(.*)' $FPRE
-  lum::help::def fmt-end M $FMTF '(.*?)\$:(\w+)\((.*?)\)(.*)' $FEND
-
-  lum::help::def 'esc' m $FMTF::esc $FPRE
-  local -a FMT_FNS=(b head code val pad clr)
-  local FF
-  for FF in "${FMT_FNS[@]}"; do
-    lum::help::def $FF m $FMTF::$FF $FPRE
-    lum::help::def $FF m $FMTF::$FF $FEND
-  done
-  lum::help::def 'escaped' m $FMTF::escaped $FEND
+  lum::help::def param M $LHT::hl '(.*?)\(\((.*?)\)\)(.*?)'
+  lum::help::def value M $LHT::hl '(.*?)``(.*?)``(.*)' "'"
+  lum::help::def syntax M $LHT::hl '(.*?)`\{(.*?)\}`(.*)'
+  lum::help::def fmt-pre M $LHT::fmt '(.*?)\$(\w+)\((.*?)\);(.*)'
+  lum::help::def fmt-end M $LHT::fmt '(.*?)\$(\w+)\{(.*?)\};(.*)'
+  lum::help::def escape M $LHT::del '(.*?)\\\\(.*)'
 
   ## Mark this as done
   LUM_HELP_TMPL_INIT=1
 }
 
+lum::fn lum::help::tmpl 4 -H 0 "fmt-pre value syntax fmt-end escape"
+#$ - Default help template defs
+#
+# The following pre-defined defs are used in the default help groups.
+#
+# [+++] ``fmt-pre``      `{$\\fn(args)\\;}`
+# [+--] ``value``        `{$esc(``value``);}`
+# [+--] ``param``        `{$esc(((param)));}`
+# [-+-] ``arg``          `{$esc(<<mandatory>>);}`
+# [-+-] ``opt``          `{$esc([[optional=default]]);}`
+# [++-] ``syntax``       `{$esc(`{syntax}`);}`
+# [+--] ``fmt-end``      `{$\\fn{args}\\;}`
+#
+# [012] ← Each column represents a help mode.
+#         ``+`` = Supported by default in that mode.
+#         ``-`` = Not supported by default.
+#
+# * fmt $p(fn); colour codes include: $b(b); $h(h); $i(i); $p(p); $e(e); $code(code); $val(val);.
+# * `{$\\pad(len text...)\\;}` will pad the text with spaces.
+# * `{$\\var(name)\\;}` will display the variable $p(name);.
+#
+# Extra help group ``more`` includes ALL the defs, in the order shown.
+#
 lum::help::tmpl() {
-  [ $LUM_HELP_TMPL_INIT -ne 1 ] && lum::help::tmpl--init
-
   local -n tmplDefs="$1"
-  local text="$(cat -)" dn type fn re
+  local helpMode="$2" fnName="$3" subName="$4"
+  local tmplText="$(cat -)" dn type fn re
   local -A tmplOptions
   local -n TC="LUM_HELP_THM"
 
@@ -133,91 +146,157 @@ lum::help::tmpl() {
     local type="${def[0]}"
     tmplOptions[type]="$type"
     local fn="${def[1]}"
+    
     case "$type" in
-      P)
-        tmplOptions[data]="${def[@]:2}"
-        text="$(echo "$text" | $fn tmplOptions)"
-      ;;
-      p)
-        tmplOptions[data]="${def[@]:2}"
-        text="$($fn "$text" tmplOptions)"
-      ;;
-      M)
+      M*)
         local tmplRegExp="${def[2]}"
         tmplOptions[re]="$tmplRegExp"
         tmplOptions[data]="${def[@]:3}"
-        while [[ $text =~ $tmplRegExp ]]; do
-          text="$($fn tmplOptions "${BASH_REMATCH[@]}")"
+        while [[ $tmplText =~ $tmplRegExp ]]; do
+          $fn "${BASH_REMATCH[@]}"
         done
       ;;
-      m)
-        ## This type is called from a parent handler.
-        continue
+      P*|p*)
+        local moreOpts="${def[2]:-0}"
+        local -a moreArgs=()
+        local -i typeLen="${#type}"
+
+        tmplOptions[data]="${def[@]:3}"
+        [ "$moreOpts" != "0" ] && lum::var::mergeMaps tmplOptions $moreOpts
+
+        if [ $typeLen -gt 1 ]; then
+          local -i typeMod
+          for (( typeMod=1; typeMod<$typeLen; typeMod++ )); do
+            case "${type:$typeMod:1}" in
+              '-')
+                moreArgs+=(tmplOptions)
+              ;;
+              '+')
+                moreArgs+=("${def[@]:3}")
+              ;;
+            esac
+          done
+        fi
+        
+        [ "${type:0:1}" = "P" ] \
+          && tmplText="$(echo "$tmplText" | $fn "${moreArgs[@]}")" \
+          || tmplText="$($fn "$tmplText" "${moreArgs[@]}")"
       ;;
       *)
-        lum::err "Unhandled type '$type' in a template def"
+        lum::err "Unhandled type '$type' in a template def '$dn'"
       ;;
     esac
+    shift
   done
-}
 
-lum::fn lum::help::tmpl::call
-#$ <<defvar>> <<name>> <<optsvar>> [[args...]]
-#
-# Call a child template def
-#
-# ((defvar))      The name of the ``-A`` var with the defs.
-# ((name))        The name of the child def you want to call.
-# ((optsvar))     The name of the options variable.
-#             If ``-``, uses the default lum::help::tmpl name.
-# ((args))        Arguments to pass to the child after ((optsvar)). 
-#
-lum::help::tmpl::call() {
-  [ $# -lt 3 ] && lum::help::usage
-  local -n childDefs="$1"
-  local childOptsVar="$3"
-  [ -z "$childOptsVar" -o "$childOptsVar" = '-' ] && childOptsVar=tmplOptions
-  local -n childOpts="$childOptsVar"
-  childOpts[childClass]="$2"
-  local -a childDef=(${childDefs[$2]}) # No quotes; space delimited def.
-  childOpts[childType]="${childDef[0]}"
-  local childFn="${childDef[1]}"
-  shift 3
-  $childFn childOpts "$@"
-}
-
-lum::help::tmpl::var() {
-  local before="$3"
-  local after="$5"
-  local param="${!4}"
-  echo "$before$param$after"
+  echo "$tmplText"
 }
 
 lum::help::tmpl::arg() {
-  local before="$3"
-  local after="$6"
-  local arg="$4"
-  local rep="$5"
+  local before="$2"
+  local after="$5"
+  local arg="$3"
+  local rep="$4"
 
   local param="${TC[:]}<${TC[arg]}$arg${TC[:]}"
   [ -n "$rep" ] && param+="$rep"
   param+=">${TC[;]}"
 
-  echo "$before$param$after"
+  tmplText="$before$param$after"
 }
 
 lum::help::tmpl::opt() {
-  before="$3"
-  after="$8"
-  arg="$4"
-  eq="$5"
-  def="$6"
-  rep="$7"
+  local before="$2"
+  local after="$7"
+  local arg="$3"
+  local eq="$4"
+  local def="$5"
+  local rep="$6"
 
   param="${TC[:]}[${TC[arg]}$arg${TC[:]}"
   [ "$eq" = "=" -a -n "$def" ] && param+="$eq${TC[def]}$def${TC[:]}"
   [ -n "$rep" ] && param+="$rep"
   param+="]${TC[;]}"
 
-  echo "$before$param$after"
+  tmplText="$before$param$after"
+}
+
+lum::help::tmpl::hl() {
+  local col="${tmplOptions[class]}"
+  local d="${tmplOptions[data]}"
+  local before="$2"
+  local after="$4"
+  local arg="$3"
+  local param="$d${TC[$col]}$arg${TC[;]}$d"
+  tmplText="$before$param$after"
+}
+
+lum::help::tmpl::del() {
+  ## $2 is always before text, last arg will be after text.
+  local before="$2" ai="$#"
+  local after="${!ai}"
+  tmplText="$before$after"
+}
+
+lum::help::tmpl::fmt() {
+  local before="$2"
+  local after="$5"
+  local fid="$3"
+  local arg="$4"
+
+  local repValue
+
+  local cid="${LUM_HELP_FMT_HL[$fid]}"
+  local fname="lum::help::tmpl::fmt::$fid"
+
+  #echo "fmt(${tmplOptions[class]}) fid=$fid; arg=$arg; cid=$cid; fname=$fname;" >&2
+
+  if [ -n "$cid" ]; then
+    ## Our quick colour aliases are top priority.
+    repValue="${TC[$cid]}$arg${TC[;]}"
+  elif lum::fn::is "$fname"; then
+    ## Followed by actual formatting functions.
+    $fname "$arg"
+  elif [ -n "${TC[$fid]}" ]; then
+    ## Finally fall back to the local theme colours.
+    repValue="${TC[$fid]}$arg${TC[;]}"
+  else
+    ## Nothing matched? Well that's not right.
+    lum::warn "invalid fmt '$fid'"
+  fi
+
+  tmplText="$before$repValue$after"
+}
+
+lum::help::tmpl::fmt::var() {
+  repValue="${!1}"
+}
+
+lum::help::tmpl::fmt::pad() {
+  repValue="$(lum::str::pad $1)"
+}
+
+lum::help::tmpl::fmt::see() {
+  local -a seeOpts=($1)
+  local link="${seeOpts[0]}"
+  local -i pad="${seeOpts[1]:-0}"
+  [ "${link:0:1}" = ',' ] && link="${helpOptions[show]}$link"
+  [ $pad -gt 0 ] && link="$(lum::str::pad "$pad" "$link")"
+  repValue="${TC[item]}$link${TC[;]}"
+}
+
+lum::help::tmpl::fmt::esc() {
+  case "${tmplOptions[class]}" in
+    fmt-pre)
+      local cc="${#LUM_HELP_FMT_ESC[@]}"
+      LUM_HELP_FMT_ESC+=("$1")
+      repValue="\$esc{$cc};"
+    ;;
+    fmt-end)
+      repValue="${LUM_HELP_FMT_ESC[$1]}"
+    ;;
+    *)
+      lum::err "how did we get here?"
+    ;;
+  esac
 }

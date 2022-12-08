@@ -6,7 +6,7 @@ LUM_CORE_BIN_DIR="$(dirname $0)"
 
 lum::use lum::themes::default lum::semver
 
-lum::fn bin-test-ver 2 -t 0 7
+lum::fn bin-test-ver 2 -h 0 more
 #$ <<command>> `{...}`
 #
 # Semantic version test commands:

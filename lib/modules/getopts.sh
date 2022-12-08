@@ -21,19 +21,19 @@ lum::fn lum::getopts
 # dynamically named functions that call the various ``lum::getopts::*`` 
 # functions, automatically supplying the ((id)) argument.
 #
-# ``((${prefix}))def``    → ``lum::getopts::def``
-# ``((${prefix}))parse``  → ``lum::getopts::parse``
+# ((${prefix}def))    → $val(lum::getopts::def);
+# ((${prefix}parse))  → $val(lum::getopts::parse);
 #
 # It also generates a couple functions that return the name of certain
 # variables for getting the parsed results.
 #
-# ``((${prefix}))opts``    → ``echo "${id}_OPTS"``
-# ``((${prefix}))args``    → ``echo "${id}_ARGS"``
-# ``((${prefix}))lists``   → ``echo "${id}_LIST"``
+# ((${prefix}opts))    → $val(echo "${id}_OPTS");
+# ((${prefix}args))    → $val(echo "${id}_ARGS");
+# ((${prefix}lists))   → $val(echo "${id}_LIST");
 #
 # Plus for each ``+`` type argument defined:
 #
-# ``((${prefix}${listsep}${name}))``   → ``echo "${id}_${name}_VALS"``
+# ((${prefix}${listsep}${name}))   → $val(echo "${id}_${name}_VALS");
 #
 lum::getopts() {
   [ $# -lt 1 ] && lum::help::usage
@@ -133,12 +133,12 @@ lum::getopts::def() {
   while [ $# -ge 3 ]; do
     sFlag="${1:0:1}" sName="$2" sType="${3:0:1}"
     if [ -n "${setNames[$sFlag]}" ]; then
-      echo "duplicate sFlag: '$sFlag'" >&2
-      exit $LUM_GETOPTS_ERR_FLAG_EXISTS
+      lum::warn "duplicate sFlag: '$sFlag'"
+      return $LUM_GETOPTS_ERR_FLAG_EXISTS
     fi
     if [ -n "${setFlags[$sName]}" ]; then
-      echo "duplicate sFlag: '$sFlag'" >&2
-      exit $LUM_GETOPTS_ERR_FLAG_EXISTS
+      lum::warn "duplicate sFlag: '$sFlag'"
+      return $LUM_GETOPTS_ERR_FLAG_EXISTS
     fi
     case "$sType" in
       '#')
@@ -161,8 +161,8 @@ lum::getopts::def() {
         fi
       ;;
       *)
-        echo "invalid sType: '$sType'" >&2
-        exit $LUM_GETOPTS_ERR_INVALID_TYPE
+        lum::warn "invalid sType: '$sType'"
+        return $LUM_GETOPTS_ERR_INVALID_TYPE
       ;;
     esac
     setNames[$sFlag]="$sName"
@@ -172,14 +172,14 @@ lum::getopts::def() {
   done
 }
 
-lum::fn lum::getopts::def.err 2 -t 0 13
+lum::fn lum::getopts::def.err 2
 #$ `{int}`
 #
 # Error codes for ``lum::getopts::def`` function.
 #
-# ${LUM_GETOPTS_ERR_INVALID_TYPE}  - The ((type)) was not a valid type.
-# ${LUM_GETOPTS_ERR_FLAG_EXISTS}  - The ((flag)) is already in use.
-# ${LUM_GETOPTS_ERR_NAME_EXISTS}  - The ((name)) is already in use.
+# $var(LUM_GETOPTS_ERR_INVALID_TYPE);  - The ((type)) was not a valid type.
+# $var(LUM_GETOPTS_ERR_FLAG_EXIST);  - The ((flag)) is already in use.
+# $var(LUM_GETOPTS_ERR_NAME_EXISTS);  - The ((name)) is already in use.
 #
 #: lum::getopts::def.err
 
@@ -229,7 +229,7 @@ lum::getopts::parse() {
 
   while getopts "$getOpts" pArg; do
     if [ "$pArg" = "?" ]; then 
-      lum::flag::is $errs 1 && echo "Invalid option: -${OPTARG}" >&2
+      lum::flag::is $errs 1 && lum::warn "Invalid option: -${OPTARG}"
       lum::flag::is $errs 2 && return $LUM_GETOPTS_ERR_INVALID_FLAG
     elif [ "$pArg" = ":" ]; then
       sType="${setTypes[$OPTARG]}"
@@ -237,7 +237,7 @@ lum::getopts::parse() {
         sName="${setNames[$OPTARG]}"
         setOpts[$sName]='-'
       else
-        lum::flag::is $errs 1 && echo "Option '-${OPTARG}' requires a value" >&2
+        lum::flag::is $errs 1 && lum::warn "Option '-${OPTARG}' requires a value"
         lum::flag::is $errs 2 && return $LUM_GETOPTS_ERR_MISSING_VAL
       fi
     else
@@ -264,12 +264,12 @@ lum::getopts::parse() {
   return 0
 }
 
-lum::fn lum::getopts::parse.err 2 -t 0 13
+lum::fn lum::getopts::parse.err 2
 #$ `{int}`
 #
 # Error codes for ``lum::getopts::parse`` function.
 #
-# ${LUM_GETOPTS_ERR_INVALID_FLAG}  - The ((flag)) was not recognized.
-# ${LUM_GETOPTS_ERR_MISSING_VAL}  - The ((flag)) was missing a mandatory value.
+# $var(LUM_GETOPTS_ERR_INVALID_FLAG);  - The ((flag)) was not recognized.
+# $var(LUM_GETOPTS_ERR_MISSING_VAL);  - The ((flag)) was missing a mandatory value.
 #
 #: lum::getopts::parse.err
