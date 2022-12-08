@@ -4,15 +4,15 @@
 
 lum::use lum::themes::default lum::getopts lum::use::pkg
 
-lum::fn::
-
-lum::fn lum::help::cli 0 -a "$SCRIPTNAME" 1 0 -h opts more
+lum::fn lum::help::cli 0 -a "$SCRIPTNAME" 1 0 -a help 0 0 -h opts more
 #$ [[options...]] <<topic>>
 #
 # Look up a help topic
 #
-# ((options))      See $see(,opts); for details.
 # ((topic))        The name of a function or standalone help topic.
+#              Sub-topics are marked by a comma: ``topic,subtopic``.
+#
+# See $see(help,opts); for a list of ((options)).
 #
 lum::help::cli() {
   lum::getopts lh

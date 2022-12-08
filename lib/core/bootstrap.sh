@@ -22,9 +22,10 @@
 # 
 # $h(Declaration arguments:);
 #
-# See ``lum::var.args`` for regular (non-context) arguments.
-# See ``lum::var.args-a`` for arguments in the ``-a`` context.
-# See ``lum::var.args-A`` for arguments in the ``-A`` context.
+#$line(See also);
+# $see(,args);    → For regular (non-context) arguments.
+# $see(,args-a);  → For arguments in the ``-a`` context.
+# $see(,args-A);  → For arguments in the ``-A`` context.
 #
 lum::var() {
   local flag='--' cmode='--' prefix suffix cvar echar varname
@@ -73,13 +74,14 @@ lum::var() {
             varname="$prefix$2$suffix"
             declare -g $cmode $varname
             local -n cvar="$varname"
+            [ $LUM_CORE_REBOOT -gt 0 ] && cvar=()
             shift 2
           ;;
           *)
             varname="$prefix$1$suffix"
             if [ $# -ge 3 -a "${2:0:1}" = "=" ]; then
               [ "$flag" = "-A" -o "$flag" = "-a" ] && lum::help::usage
-              if [ "${2:1:1}" = "?" ]; then
+              if [ "${2:1:1}" = "?" -a $LUM_CORE_REBOOT -le 0 ]; then
                 declare -g $flag $varname
                 local -n __var="$varname"
                 [ -z "$__var" ] && __var="$3"
@@ -90,6 +92,12 @@ lum::var() {
             else
               [ "$flag" = "-n" ] && lum::help::usage
               declare -g $flag $varname
+              if [ $LUM_CORE_REBOOT -gt 0 ]; then
+                local -n __var="$varname"
+                [ "$flag" = "-A" -o "$flag" = "-a" ] \
+                  && __var=() \
+                  || __var=
+              fi
               shift
             fi
           ;;
@@ -109,7 +117,7 @@ lum::var() {
 #
 # ((flags))      Bitwise flags that modify the definition.
 #            See ``lum::fn.flags`` for details.
-# 
+#
 # For ((opts)) preceeding the main arguments, see: ``lum::fn.opts``
 # For ((defs)) following the main arguments, see: ``lum::fn.defs``
 #
@@ -311,8 +319,7 @@ lum::fn lum::fn::help
 #
 # <<def>>                 Add ((def)) to context ((group)).
 #
-# 
-#──────────────────────────────────────────────────────────────────────────────
+#$line(See also);
 # $see(lum::help::tmpl 20); → A list of ((def)) values.
 # $see(lum::help 20); → A list of help ((mode)) int values.
 # $see(,opts 20); → Advanced options.

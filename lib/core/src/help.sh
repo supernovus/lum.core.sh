@@ -49,13 +49,12 @@ lum::fn lum::help
 #           ``2`` = Return only the summary line.
 #
 lum::help() {
-  [ $# -lt 1 ] && lum::help::usage
-
   local prefind S tName="${1:-0}" fName sName lName dName rName
   local -i want="${2:-0}" FS=0 FE=0 SU=0
   local err="${LUM_THEME[error]}"
   local end="${LUM_THEME[end]}"
   local -n WANT=LUM_HELP_WANT
+  local -i lineWidth="$(lum::help::width)"
 
   if [ "$tName" = "0" ]; then 
     fName="${FUNCNAME[1]}"

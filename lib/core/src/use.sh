@@ -3,12 +3,9 @@
 
 [ -z "$LUM_USE_ERRCODE" ] && LUM_USE_ERRCODE=222
 
-declare -ga LUM_LIB_DIRS
-declare -ga LUM_CONF_DIRS
-declare -ga LUM_CONF_ALIASES
-declare -gA LUM_USE_NAMES
-declare -gA LUM_USE_FILES
-declare -gA LUM_LIB_PREFIX_DIR
+lum::var -P LUM_ \
+  -a LIB_DIRS CONF_DIRS CONF_ALIASES \
+  -A USE_NAMES USE_FILES LIB_PREFIX_DIR
 
 lum::fn::alias::group CONF 0 LUM_CONF_ALIASES
 

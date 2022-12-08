@@ -35,8 +35,7 @@ lum::fn lum::help::def 0 -h 0 more
 #           Will have access to a ``tmplOptions`` local var with info
 #           about the def, and any options and/or data associated with it.
 #
-# See also:
-#
+#$line(See also);
 # $see(,type); → The ((type)) values, and additional args.
 # $see(,opts); → The ((tmplOptions)) available to handlers.
 #
@@ -274,6 +273,27 @@ lum::help::tmpl::fmt::var() {
 
 lum::help::tmpl::fmt::pad() {
   repValue="$(lum::str::pad $1)"
+}
+
+lum::help::tmpl::fmt::line() {
+  local -i width=$lineWidth
+  local title
+  local wre='(\d+) (.*)'
+
+  if [ -n "$1" ]; then
+    if [[ $1 =~ $wre ]]; then
+      width="${BASH_REMATCH[1]}"
+      title="${BASH_REMATCH[2]}"
+    else
+      title="$1"
+    fi
+  fi
+
+  if [ -z "$title" ]; then
+    repValue="$(lum::str::repeat "─" $width)"
+  else
+    repValue="$(lum::str::pad -c "─" "$width" "─($title)")"
+  fi
 }
 
 lum::help::tmpl::fmt::see() {

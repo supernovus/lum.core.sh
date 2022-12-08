@@ -13,7 +13,7 @@ lum::fn sort-usage 2
 #                  
 # ((values))         The values to sort.
 #
-# The ((sortOpts)) and ((values)) **must** be separated with ``--``.
+# The ((sortOpts)) and ((values)) $b(must); be separated with ``--``.
 #
 #: sort-usage
 
