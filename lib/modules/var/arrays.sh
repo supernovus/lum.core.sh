@@ -1,5 +1,5 @@
-#@lib: lum::var::filters
-#@desc: Functions for filtering data in array vars
+#$< lum::var::arrays
+# More var functions dealing with arrays
 
 lum::fn lum::var::rmFrom
 #$ [[options]] <<varname>> <<value...>>

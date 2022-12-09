@@ -1,5 +1,5 @@
-#@lib: lum::core /fn
-#@desc: Submodule for functions related to functions
+#$< lum::core /fn
+# Submodule for functions related to functions
 
 lum::fn lum::fn::run 0 -h 0 more
 #$ <<mode>> `{modeArgs...}` <<name>> `{funcArgs...}`
@@ -60,19 +60,20 @@ lum::fn::run() {
   fi
 }
 
-## Private sub-function for lum::fn::run
+#$>
+# Private sub-function for lum::fn::run
 lum::fn::run-err() {
   local err="${LUM_THEME[error]}" end="${LUM_THEME[end]}"
   lum::err "Unrecognized command '$err$1$end' specified" 1
 }
 
 lum::fn lum::fn::copy
-#$ <<oldName>> <<newName>>
+#$ <<src>> <<dest>>
 #
 # Makes a copy of a function.
 #
-# ((oldName))  The existing function.
-# ((newName))  The name for the copy.
+# ((src))  The existing function.
+# ((dest))  The name for the copy.
 #
 # Useful for making a backup of an existing function
 # before overriding it with a new version.
@@ -103,15 +104,19 @@ lum::fn::make() {
   eval "${func[@]}"
 }
 
-lum::fn lum::fn::list
-#$ [[prefix]] 
+lum::fn lum::fn::ln
+#$ <<src>> <<dest>>
 #
-# Show a list of functions.
+# Make a function that calls another function.
 #
-# ((prefix))    Show only functions starting with this.
+# ((src))  The existing function.
+# ((dest))  The name for the copy.
 #
-lum::fn::list() {
-  compgen -A function "$1"
+# Unlike ``lum::fn::copy`` this is not copying the function,
+# it's simply making another function that calls the first one.
+#
+lum::fn::ln() {
+  lum::fn::make "$2" "$1 \"\$@\""
 }
 
 lum::fn lum::fn::is

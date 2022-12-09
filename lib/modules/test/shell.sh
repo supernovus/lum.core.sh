@@ -1,8 +1,8 @@
-#@lib: lum::test::shell
-#@desc: A testing shell for lum.sh libraries
-#@desc: Not meant for use by anything other than lum-core/bin/test.sh
+#$< lum::test::shell
+# A testing shell for lum.sh libraries
+# Not meant for use by anything other than lum-core/bin/test.sh
 
-lum::use lum::themes::default lum::use::pkg lum::readline
+lum::use lum::themes::default lum::use::pkg lum::help::list
 
 lum::var -P LUM_SHELL_ \
   CTX PROMPT \
@@ -16,6 +16,7 @@ lum::var -P LUM_SHELL_ \
     'p' = "lum::use::pkg" \
     ';' = "history -c" \
     ':' = "shopt" \
+    '~' = "eval" \
     '@' = "lum::test::shell::prompt" \
     '=' = "lum::test::shell::stmt-prefix" \
     -
@@ -38,6 +39,7 @@ lum::fn lum::test::shell 0 -a "$SCRIPTNAME" 1 0 -h 0 more
 # $shell(@); <<msg>>    → Set the prompt message.
 # $shell(=); [[str]]    → Get/Set the shell command prefix.
 # $shell(:); <<opts>>   → Pass through to ``shopt`` command.
+# $shell(~); <<cmd>>    → Run a bash command (skip context).
 # $shell(;);          → Clear the shell history.
 # $shell(.);          → Reload shell and all libraries.
 #
@@ -56,8 +58,6 @@ lum::test::shell() {
   echo "${LT[help.syntax]}for help: ${LT[help.value]}${LSS}h${LT[end]}"
 
   history -r "$LUM_SHELL_HISTORY"
-  #complete -F lum::test::shell::completion -D
-  #lum::
 
   while true; do 
     read -e -p "[$LUM_SHELL_PROMPT]> " line
@@ -75,13 +75,13 @@ lum::test::shell() {
         return 0
       ;;
       "${LSS}"*)
-        lum::test::shell::stmt "$line"
+        ( lum::test::shell::stmt "$line" )
       ;;
       *)
-        eval "$LUM_SHELL_CTX" "$line"
+        ( eval "$LUM_SHELL_CTX" "$line" )
       ;;
     esac
-  done 
+  done
 
   history -w "$LUM_SHELL_HISTORY"
   return 0
@@ -144,17 +144,6 @@ lum::test::shell::prompt() {
 
 lum::test::shell::help() {
   lum::help "${1:-lum::test::shell}"
-}
-
-lum::test::shell::completion() {
-  lum::warn "shell::comp($1): $2"
-  case "$1" in
-    "lum::help"|"//h")
-      local -A knownTopics
-      lum::var::mergeMaps knownHelpTopics LUM_FN_FILES LUM_ALIAS_FN
-      COMPREPLY+=("${!knownHelpTopics[@]}")
-    ;;
-  esac
 }
 
 lum::test::shell::stmt-prefix() {

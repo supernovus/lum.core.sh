@@ -1,7 +1,7 @@
-#@lib: lum::core /flag
-#@desc: Bitwise flag functions
+#$< lum::core /flag
+#@ Bitwise flag functions
 
-lum::fn lum::flag::is
+lum::fn lum::flag
 #$ <<bitvalue1>> <<bitvalue2>>
 #
 # Test for the presense of bitwise flags.
@@ -15,22 +15,6 @@ lum::flag::is() {
   testVal=$((bitA & bitB))
   [ $testVal -eq 0 ] && return 1
   return 0
-}
-
-lum::fn lum::flag::not
-#$ <<bitvalue1>> <<bitvalue2>>
-#
-# Test for the absense of bitwise flags.
-#
-# Performs a bitwise AND against two values.
-# Returns true if the value IS zero.
-#
-lum::flag::not() {
-  [ $# -ne 2 ] && lum::help::usage
-  local bitA=$1 bitB=$2 testVal
-  testVal=$((bitA & bitB))
-  [ $testVal -eq 0 ] && return 0
-  return 1
 }
 
 lum::fn lum::flag::set

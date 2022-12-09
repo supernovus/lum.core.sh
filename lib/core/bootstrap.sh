@@ -19,8 +19,6 @@
 # When in a context, none of the modifier options have any effect.
 # The context will reset to default when the ((end)) value (default ``-``)
 # is passed as an argument. 
-# 
-# $h(Declaration arguments:);
 #
 #$line(See also);
 # $see(,args);    → For regular (non-context) arguments.
@@ -118,8 +116,9 @@ lum::var() {
 # ((flags))      Bitwise flags that modify the definition.
 #            See ``lum::fn.flags`` for details.
 #
-# For ((opts)) preceeding the main arguments, see: ``lum::fn.opts``
-# For ((defs)) following the main arguments, see: ``lum::fn.defs``
+#$line(See also);
+# $see(,opts); → For ((opts)) preceeding the main arguments.
+# $see(,defs); → For ((defs)) following the main arguments.
 #
 lum::fn() {
   [ $# -lt 1 ] && lum::help::usage
@@ -240,14 +239,14 @@ lum::var::id() {
 }
 
 lum::fn lum::fn::alias
-#$ <<funcname>> <<alias>> [[opts=0]] [[list=0]]
+#$ <<fname>> <<alias>> [[opts=0]] [[list=0]]
 #
 # Create a function alias.
 #
 # This is primarily only used by the help system, but
 # will also be used for command line dispatch as well.
 #
-# ((funcname))   The full function name (e.g. ``myapp::coolFunc``).
+# ((fname))      The full function name (e.g. ``myapp::coolFunc``).
 #
 # ((alias))      The alias name (e.g. ``--cool``).
 #
@@ -282,7 +281,7 @@ lum::fn::alias() {
   fi
 
   if lum::flag::is $opts $PRI; then 
-    [ -n "${LUM_FN_ALIAS[$fName]}" ] && lum::flag::not $opts $OVWR && return
+    [ -n "${LUM_FN_ALIAS[$fName]}" ] && ! lum::flag::is $opts $OVWR && return
     LUM_FN_ALIAS[$fName]="$aName"
   fi
 }
@@ -458,14 +457,13 @@ lum::fn::help --core -f '*' \
     fmt-pre \
   -g more fmt-pre value param arg opt syntax fmt-end
 
-lum::fn lum::fn 1
+lum::fn lum::fn 1 -h opts more
 lum::fn lum::var 5 -h 0 more
 lum::fn::help --core -f 'lum::fn::help' -m 0 more
 
 ### Extra documentation
 
-lum::fn lum::fn.flags 6
-#$ - Help text settings (bitwise flags)
+#$ lum::fn,flags - Help text settings (bitwise flags)
 #
 # ``1``    The help text must start with an extended usage line,
 #        including the officially registered function name.
@@ -477,28 +475,26 @@ lum::fn lum::fn.flags 6
 #        If no valid end-line is found, ends at first non-comment line.
 # ``4``    The usage line is also the summary.
 #
-#: lum::fn.flags
+#: lum::fn,flags
 
-lum::fn lum::fn.defs 6
-#$ - Extra lum::fn arguments
+#$ lum::fn,defs - Extra lum::fn arguments
 #
 # Each of these has a specific number of arguments that MUST be passed.
-# You can specify as many options as you like, as long as the argument
-# count is correct. Below we'll list the mandatory argument count, and
-# the target function that will be called with the arguments. The ``F``
-# symbol refers to the ((funcname)) parameter.
+# The required arguments will be shown below in a ``$1{name}`` format,
+# where ``1`` is the positional argument number, and ``name`` is simply a
+# description of the argument. The ``$F`` symbol is the mandatory ((name))
+# argument passed to $val(lum::fn); before any of these arguments.
 #
-# ((-a))   `{(3)}` → ``lum::fn::alias F $1{name} $2{opts} $3{list}``
-# ((-A))   `{(2)}` → ``lum::fn::alias F $1{aname} $2{group}``
-# ((-h))   `{(2)}` → ``lum::fn::help --core -f F -m $1{mode} $2{group}``
-# ((-H))   `{(2)}` → ``lum::fn::help --fn -f F -m $1{mode} '+' $2{args}``
-#                  The ((args)) should be a quoted string of additional
-#                  arguments separated by whitespace.
+# ((-a))   → lum::fn::alias $i($F); (($1{name} $2{opts} $3{list}))
+# ((-A))   → lum::fn::alias (($F $1{aname} $2{group}))
+# ((-h))   → lum::fn::help --core -f (($F)) -m (($1{mode} $2{group}))
+# ((-H))   → lum::fn::help --fn -f (($F)) -m (($1{mode})) '+' (($2{args}))
+#        The ((args)) should be a quoted string of additional
+#        arguments separated by whitespace.
 #
-#: lum::fn.defs
+#: lum::fn,defs
 
-lum::fn lum::fn.opts 6 -h 0 more
-#$ - Advanced lum::fn options
+#$ lum::fn,opts - Advanced lum::fn options
 #
 # ``-S <<int>>``     Callback levels to source file (default ``1``)
 # ``-R <<int>>``     Callback levels to register func (default ``0``)
@@ -506,10 +502,9 @@ lum::fn lum::fn.opts 6 -h 0 more
 # ``--src <<str>>``  Path to source file (overrides ``-S``)
 # ``--reg <<str>>``  Name of register func (overrides ``-R``)
 #
-#: lum::fn.opts
+#: lum::fn,opts
 
-lum::fn lum::var.args 6 -h 0 more
-#$ - Regular arguments for lum::var
+#$ lum::var,args - Regular arguments for lum::var
 #
 # <<var>>                → Declare variable ((var)) with no initial value. 
 #                        Not supported by ``-n`` mode.
@@ -525,26 +520,23 @@ lum::fn lum::var.args 6 -h 0 more
 # ``=``    → Direct assignment of ((val)) value to the ((var)) variable.
 # ``=?``   → Only assign ((val)) if ((var)) is not already set.
 #
-#: lum::var.args
+#: lum::var,args
 
-lum::fn lum::var.args-a 6 -h 0 more
-#$ - Arguments for $.syntax(-a=) mode in lum::var
+#$ lum::var,args-a - Arguments for $.syntax(-a=) mode in lum::var
 #
 # <<val>>    → Add ((val)) to context array.
 #
-#: lum::var.args-a
+#: lum::var,args-a
 
-lum::fn lum::var.args-A 6 -h 0 more
-#$ - Arguments for $.syntax(-A=) mode in lum::var
+#$ lum::var,args-A - Arguments for $.syntax(-A=) mode in lum::var
 #
 # <<key>> <<op>> <<val>> → Set context array key ((key)) to value ((val)).
 #
-# See ``lum::var.args`` for a description of ((op)) values.
+# See $see(lum::var,args); for a description of ((op)) values.
 #
-#: lum::var.args-A
+#: lum::var,args-A
 
-lum::fn lum::fn::help.opts 6 -h 0 more
-#$ - More options for lum::fn::help
+#$ lum::fn::help,opts - More options for lum::fn::help
 #
 # ``-P <<prefix>>``         Following group variables prefixed with this.
 # ``-S <<suffix>>``         Following group variables suffixed with this.
@@ -558,4 +550,4 @@ lum::fn lum::fn::help.opts 6 -h 0 more
 # ``--core``                Following groups use core settings.
 # ``--fn``                  Following groups use fn settings.
 #
-#: lum::fn::help.opts
+#: lum::fn::help,opts

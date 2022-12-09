@@ -1,5 +1,5 @@
-#@lib: lum::core /str
-#@desc: String utilities
+#$< lum::core /str
+# String utilities
 
 lum::fn lum::str::pad 0 -h 0 more
 #$ [[opts...]] <<len>> <<string...>>

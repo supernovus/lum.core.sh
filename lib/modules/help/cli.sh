@@ -1,8 +1,8 @@
-#@lib: lum::help::cli
-#@desc: An advanced CLI help script for Lum.sh
-#@desc: Not meant for use by anything other than lum-core/bin/help.sh
+#< lum::help::cli
+# An advanced CLI help script for Lum.sh
+# Not meant for use by anything other than lum-core/bin/help.sh
 
-lum::use lum::themes::default lum::getopts lum::use::pkg
+lum::use lum::help::list lum::themes::default lum::getopts lum::use::pkg 
 
 lum::fn lum::help::cli 0 -a "$SCRIPTNAME" 1 0 -a help 0 0 -h opts more
 #$ [[options...]] <<topic>>

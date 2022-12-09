@@ -1,10 +1,10 @@
-#@lib: lum::core /help_tmpl
-#@desc: Template engine for the help system
+#$< lum::core /help_tmpl
+# Template engine for the help system
 
 lum::var -P LUM_HELP_ \
   -i TMPL_INIT = 0 \
   -a FMT_ESC \
-  -A DEFS THM FMT_VARS \
+  -A DEFS THM \
   -A= FMT_HL \
      b = bold \
      h = header \
@@ -47,7 +47,7 @@ lum::help::def() {
   DEF[$dname]="$@"
 }
 
-#$ lum::help::def#type - Help template handler types
+#$ lum::help::def,type - Help template handler types
 #
 # ``M``            Match a RegExp, assign value to local ``tmplText`` var.
 #                Def args: <<regexp>> [[data...]]
@@ -69,18 +69,20 @@ lum::help::def() {
 #                Def args and modifiers are same as ``P``.
 #                Handler args: <<helptext>>
 #
-#: lum::help::def#type
+#: lum::help::def,type
 
-#$ lum::help::def#opts - Help template handler options
+#$ lum::help::def,opts - Help template handler options
 #
-# Every handler function is passed an ((optsvar)) argument.
-# This argument is the name of a local scope ``-A`` array variable that 
-# contains options and metadata for the handler. 
+# The $val(tmplOptions) var contains a bunch of information
+# about the template. 
 #
-# TODO: document this further.
+# TODO: document pre-defined keys.
 #
-#: lum::help::def#opts
+#: lum::help::def,opts
 
+#$>
+# Initialize the help template variables.
+# Must be called before ``lum::help::tmpl``!
 lum::help::tmpl--init() {
   ## Set up the theme
   LUM_HELP_THM[;]="${LUM_THEME[end]}"
@@ -126,11 +128,9 @@ lum::fn lum::help::tmpl 4 -H 0 "fmt-pre value syntax fmt-end escape"
 #         ``+`` = Supported by default in that mode.
 #         ``-`` = Not supported by default.
 #
-# * fmt $p(fn); colour codes include: $b(b); $h(h); $i(i); $p(p); $e(e); $code(code); $val(val);.
-# * `{$\\pad(len text...)\\;}` will pad the text with spaces.
-# * `{$\\var(name)\\;}` will display the variable $p(name);.
-#
 # Extra help group ``more`` includes ALL the defs, in the order shown.
+#
+# See $see(,fmt); for a list of tag names supported.
 #
 lum::help::tmpl() {
   local -n tmplDefs="$1"
@@ -161,7 +161,7 @@ lum::help::tmpl() {
         local -i typeLen="${#type}"
 
         tmplOptions[data]="${def[@]:3}"
-        [ "$moreOpts" != "0" ] && lum::var::mergeMaps tmplOptions $moreOpts
+        [ "$moreOpts" != "0" ] && lum::var::merge tmplOptions $moreOpts
 
         if [ $typeLen -gt 1 ]; then
           local -i typeMod
@@ -300,7 +300,7 @@ lum::help::tmpl::fmt::see() {
   local -a seeOpts=($1)
   local link="${seeOpts[0]}"
   local -i pad="${seeOpts[1]:-0}"
-  [ "${link:0:1}" = ',' ] && link="${helpOptions[show]}$link"
+  [ "${link:0:1}" = ',' ] && link="${helpOptions[root]}$link"
   [ $pad -gt 0 ] && link="$(lum::str::pad "$pad" "$link")"
   repValue="${TC[item]}$link${TC[;]}"
 }
@@ -320,3 +320,19 @@ lum::help::tmpl::fmt::esc() {
     ;;
   esac
 }
+
+#$ lum::help::tmpl,fmt - Format 
+#
+# $i(*); Colour-only codes: $b(b); $h(h); $i(i); $p(p); $e(e); $code(code); $val(val);.
+# $i(*); `{$\\pad(len text...)\\;}` will pad the text with spaces.
+# $i(*); `{$\\var(name)\\;}` will display the variable $p(name);.
+# $i(*); `{$\\see(link pad?)\\;}` will display a link to another help item.
+#    If the $p(link); starts with a ``,`` it is a sub-topic of the current topic.
+#    $p(pad);        → If specified, pad the end of the string to this length.
+# $i(*); `{$\\line(width? caption?)\\;}` will draw a line.
+#    $p(width);      → If specified the line will be this long.
+#    $p(caption);    → If specified, a caption will be embedded in the line.
+#    You can specify either one without specifying the other.
+#    However to specify BOTH, they MUST be in the order shown.
+#
+#: lum::help::tmpl,fmt

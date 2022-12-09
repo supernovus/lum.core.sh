@@ -1,5 +1,5 @@
-#@lib lum::core /use
-#@desc Library module loading system
+#$< lum::core /use
+# Library module loading system
 
 [ -z "$LUM_USE_ERRCODE" ] && LUM_USE_ERRCODE=222
 
@@ -82,8 +82,7 @@ lum::use() {
   done
 }
 
-lum::fn lum::use::-conf
-#$ <<filename>>
+#$ lum::use,conf - <<filename>>
 #
 # Internal method to load a config file
 #
@@ -92,8 +91,9 @@ lum::fn lum::use::-conf
 # Any alias in the ``LUM_CONF_ALIASES`` list will be
 # made available for use in config files.
 #
+#: lum::use,conf
 lum::use::-conf() {
-  [ $# -eq 0 ] && lum::help::usage
+  [ $# -eq 0 ] && lum::help::usage lum::use,conf
   local conf="$1" A F
   for A in "${LUM_CONF_ALIASES[@]}"; do
     lum::fn::is "$A" && lum::warn "function '$F' already exists" && return $LUM_USE_ERRCODE 

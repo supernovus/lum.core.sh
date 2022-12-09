@@ -1,5 +1,5 @@
-#@lib: lum::core /var
-#@desc: Variable related functions
+#< lum::core /var
+# Variable related functions
 
 [ -z "$LUM_NEED_ERRCODE" ] && LUM_NEED_ERRCODE=199
 
@@ -12,17 +12,6 @@ lum::fn lum::var::is
 #
 lum::var::is() {
   [ -n "${!1}" ]
-}
-
-lum::fn lum::var::not
-#$ <<varname>>
-#
-# Test if a variable is NOT set.
-#
-# A set variable is one with a non-empty value.
-#
-lum::var::not() {
-  [ -z "${!1}" ]
 }
 
 lum::fn lum::var::declared
@@ -56,17 +45,6 @@ lum::var::type() {
   declare -p "$1" 2>/dev/null | cut -d' ' -f2
 }
 
-lum::fn lum::var::need
-#$ <<varname>>
-#
-# If a variable is NOT set, die with an error.
-#
-lum::var::need() {
-  if lum::var::not "$1"; then 
-    lum::err "Missing '$1' variable" $LUM_NEED_ERRCODE 
-  fi
-}
-
 lum::fn lum::var::has
 #$ <<varname>> <<want>>
 #
@@ -86,26 +64,7 @@ lum::var::has() {
   return 1
 }
 
-lum::fn lum::var::sort
-#$ <<invar>> <<outvar>> [[options...]]
-#
-# Sort an array
-#
-# ((invar))        The name of the array variable to sort.
-# ((outvar))       The name of the target array variable.
-# ((options))      Any options for the ``sort`` command.
-#
-lum::var::sort() {
-  [ $# -lt 2 ] && lum::help::usage
-  local -n invar="$1"
-  local -n outvar="$2"
-  shift 2
-  local sortOpts="$@"
-  local IFS=$'\n'
-  outvar=($(sort $sortOpts <<<"${invar[*]}"))
-}
-
-lum::fn lum::var::mergeMaps
+lum::fn lum::var::merge
 #$ <<dest>> <<sources...>>
 #
 # Merge a bunch of associative arrays
@@ -119,7 +78,7 @@ lum::fn lum::var::mergeMaps
 #
 #           Latter sources with duplicate keys will overwrite earlier ones.
 #
-lum::var::mergeMaps() {
+lum::var::merge() {
   [ $# -lt 2 ] && lum::help::usage
   [ "$(lum::var::type "$1")" != "-A" ] && lum::help::usage
   local -n mapDestVar="$1"
