@@ -6,18 +6,18 @@ lum::use lum::themes::default lum::use::pkg lum::readline
 
 lum::var -P LUM_SHELL_ \
   CTX PROMPT \
-  STMT = "//" \
+  STMT = "/" \
   HISTORY = "$HOME/.lum-core-test-history" \
   -A= STMTS \
-    c = "lum::test::shell::ctx" \
-    h = "lum::test::shell::help" \
-    P = "lum::test::shell::prompt" \
-    u = "lum::use" \
-    U = "lum::use --reload" \
-    p = "lum::use::pkg" \
-    H = "history -c" \
-    ':' = 'shopt' \
-    '!' = 'set' \
+    'c' = "lum::test::shell::ctx" \
+    'h' = "lum::test::shell::help" \
+    'u' = "lum::use" \
+    'U' = "lum::use --reload" \
+    'p' = "lum::use::pkg" \
+    ';' = "history -c" \
+    ':' = "shopt" \
+    '@' = "lum::test::shell::prompt" \
+    '=' = "lum::test::shell::stmt-prefix" \
     -
 
 ## Private formatting function for our help.
@@ -30,14 +30,15 @@ lum::fn lum::test::shell 0 -a "$SCRIPTNAME" 1 0 -h 0 more
 #
 # $shell(q);          → Exit shell normally.
 # $shell(Q);          → Exit shell, do not save history.
-# $shell(H);          → Clear the shell history.
 # $shell(h); [[topic]]  → Get help (see $see(lum::help);).
-# $shell(P); <<msg>>    → Set the prompt message.
 # $shell(p); <<pkg>>    → Enable the ((pkg)) (see $see(lum::use::pkg);).
 # $shell(u); <<lib>>    → Use the ((lib)) library (see $see(lum::use);).
 # $shell(U); <<lib>>    → Use the ((lib)) library (force reload).
-# $shell(C); [[str]]    → Get/Set the shell command prefix.
 # $shell(c); [[ctx]]    → Get/Set the context (see $see(shell-ctx);).
+# $shell(@); <<msg>>    → Set the prompt message.
+# $shell(=); [[str]]    → Get/Set the shell command prefix.
+# $shell(:); <<opts>>   → Pass through to ``shopt`` command.
+# $shell(;);          → Clear the shell history.
 # $shell(.);          → Reload shell and all libraries.
 #
 # Anything else will be evaluated as a statement in the context.
