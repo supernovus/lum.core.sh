@@ -1,5 +1,5 @@
-#@lib: lum::themes::default
-#@desc: A default colour theme
+#$< lum::themes::default
+# A default colour theme
 
 lum::use lum::colour
 

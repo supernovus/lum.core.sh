@@ -8,15 +8,17 @@ lum::var -P LUM_SHELL_ \
   CTX PROMPT \
   STMT = "/" \
   HISTORY = "$HOME/.lum-core-test-history" \
+  -i SUBS = 1 \
   -A= STMTS \
     'c' = "lum::test::shell::ctx" \
+    'C' = "lum::test::shell::submode" \
     'h' = "lum::test::shell::help" \
+    'H' = "help" \
     'u' = "lum::use" \
     'U' = "lum::use --reload" \
     'p' = "lum::use::pkg" \
     ';' = "history -c" \
-    ':' = "shopt" \
-    '~' = "eval" \
+    ':' = "eval" \
     '@' = "lum::test::shell::prompt" \
     '=' = "lum::test::shell::stmt-prefix" \
     -
@@ -31,20 +33,24 @@ lum::fn lum::test::shell 0 -a "$SCRIPTNAME" 1 0 -h 0 more
 #
 # $shell(q);          → Exit shell normally.
 # $shell(Q);          → Exit shell, do not save history.
-# $shell(h); [[topic]]  → Get help (see $see(lum::help);).
+# $shell(h); [[topic]]  → Get library help (see $see(lum::help);).
+# $shell(H); [[topic]]  → Get bash internals help.
 # $shell(p); <<pkg>>    → Enable the ((pkg)) (see $see(lum::use::pkg);).
 # $shell(u); <<lib>>    → Use the ((lib)) library (see $see(lum::use);).
 # $shell(U); <<lib>>    → Use the ((lib)) library (force reload).
 # $shell(c); [[ctx]]    → Get/Set the context (see $see(shell-ctx);).
+# $shell(C);          → Toggle the context subshell mode.
 # $shell(@); <<msg>>    → Set the prompt message.
 # $shell(=); [[str]]    → Get/Set the shell command prefix.
-# $shell(:); <<opts>>   → Pass through to ``shopt`` command.
-# $shell(~); <<cmd>>    → Run a bash command (skip context).
+# $shell(:); <<cmd>>    → Run a shell command outside context.
 # $shell(;);          → Clear the shell history.
 # $shell(.);          → Reload shell and all libraries.
 #
-# Anything else will be evaluated as a statement in the context.
+# Any other values will be evaluated as a statement in the current context.
+# If the context subshell mode is enabled, statements are ran in a subshell.
+# 
 # Current context: ``$var(LUM_SHELL_CTX);``
+# Subshell mode is: ``$bool(LUM_SHELL_SUBS);``
 #$line();
 lum::test::shell() {
   local LFR="lum::fn::run"
@@ -75,10 +81,14 @@ lum::test::shell() {
         return 0
       ;;
       "${LSS}"*)
-        ( lum::test::shell::stmt "$line" )
+        lum::test::shell::stmt "$line"
       ;;
       *)
-        ( eval "$LUM_SHELL_CTX" "$line" )
+        if [ $LUM_SHELL_SUBS -eq 1  ]; then
+          ( eval "$LUM_SHELL_CTX" "$line" )
+        else
+          eval "$LUM_SHELL_CTX" "$line"
+        fi
       ;;
     esac
   done
@@ -108,8 +118,8 @@ lum::fn lum::test::shell::ctx 0 -a shell-ctx 1 0
 # and possibly some leading arguments. There are a few special values:
 # 
 # - If one of ``0 1 2``, uses '$val(lum::fn::run); ((ctx))'.
-# - If the ``-`` character, clears the context entirely.
-#   With no context, the input lines are evaluated as raw bash statements.
+# - If the ``-`` character, use an empty context.
+#   With an empty context, the input lines are evaluated as bash statements.
 #
 # If no value is specified, this will output the current context.
 #
@@ -149,4 +159,14 @@ lum::test::shell::help() {
 lum::test::shell::stmt-prefix() {
   [ -z "$1" ] && echo "$LUM_SHELL_STMT" && return
   LUM_SHELL_STMT="$1"
+}
+
+lum::test::shell::submode() {
+  if [ $LUM_SHELL_SUBS -eq 1 ]; then 
+    LUM_SHELL_SUBS=0
+    echo "disabled"
+  else 
+    LUM_SHELL_SUBS=1
+    echo "enabled"
+  fi
 }

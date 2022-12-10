@@ -111,7 +111,7 @@ lum::help::tmpl--init() {
   LUM_HELP_TMPL_INIT=1
 }
 
-lum::fn lum::help::tmpl 4 -H 0 "fmt-pre value syntax fmt-end escape"
+lum::fn lum::help::tmpl 4 -h 0 docs -h fmt docs
 #$ - Default help template defs
 #
 # The following pre-defined defs are used in the default help groups.
@@ -271,6 +271,14 @@ lum::help::tmpl::fmt::var() {
   repValue="${!1}"
 }
 
+lum::help::tmpl::fmt::bool() {
+  local -a boolOpts=($1)
+  local varname="${boolOpts[0]}"
+  local onval="${boolOpts[1]:-on}"
+  local offval="${boolOpts[2]:-off}"
+  [ "${!varname}" = 0 ] && repValue="$offval" || repValue="$onval"
+}
+
 lum::help::tmpl::fmt::pad() {
   repValue="$(lum::str::pad $1)"
 }
@@ -325,12 +333,15 @@ lum::help::tmpl::fmt::esc() {
 #
 # $i(*); Colour-only codes: $b(b); $h(h); $i(i); $p(p); $e(e); $code(code); $val(val);.
 # $i(*); `{$\\pad(len text...)\\;}` will pad the text with spaces.
-# $i(*); `{$\\var(name)\\;}` will display the variable $p(name);.
+# $i(*); `{$\\var(varname)\\;}` will display the $p(varname); variable.
+# $i(*); `{$\\bool(varname on? off?)\\;}` show $p(off); if $p(name); is ``0``, or $p(on); otherwise.
+#    $p(on); default value is ``on``, $p(off); default value is ``off``.
 # $i(*); `{$\\see(link pad?)\\;}` will display a link to another help item.
 #    If the $p(link); starts with a ``,`` it is a sub-topic of the current topic.
 #    $p(pad);        → If specified, pad the end of the string to this length.
 # $i(*); `{$\\line(width? caption?)\\;}` will draw a line.
 #    $p(width);      → If specified the line will be this long.
+#                 Otherwise it will fill the width of the terminal.
 #    $p(caption);    → If specified, a caption will be embedded in the line.
 #    You can specify either one without specifying the other.
 #    However to specify BOTH, they MUST be in the order shown.

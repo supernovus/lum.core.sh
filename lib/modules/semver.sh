@@ -1,9 +1,9 @@
-#@lib: lum::semver
-#@desc: A bare-bones Semantic Versioning 2.0.0 library
-#@desc: It is based on several functions from semver-tool,
-#@desc: modified for parsing and comparison purposes only.
-#@see: https://github.com/fsaintjacques/semver-tool
-#@see: https://semver.org
+#$< lum::semver
+# A bare-bones Semantic Versioning 2.0.0 library
+# It is based on several functions from semver-tool,
+# modified for parsing and comparison purposes only.
+# https://github.com/fsaintjacques/semver-tool
+# https://semver.org
 
 LUM_SEMVER_NAT='0|[1-9][0-9]*'
 LUM_SEMVER_ALPHANUM='[0-9]*[A-Za-z-][0-9A-Za-z-]*'

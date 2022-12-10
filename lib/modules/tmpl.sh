@@ -22,7 +22,7 @@ lum::fn lum::tmpl
 #
 lum::tmpl() {
   local -A __
-  lum::var::mergeMaps __ LUM_TMPL_OPTS $@
+  lum::var::merge __ LUM_TMPL_OPTS $@
 
   __[blockre]="(.*?)${__[bls]}\s*(.*?)${__[ble]}(.*)"
 

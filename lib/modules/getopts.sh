@@ -1,5 +1,5 @@
-#@lib: lum::getopts
-#@desc: A wrapper around getopts
+#$< lum::getopts
+# A wrapper around getopts
 
 [ -z "$LUM_GETOPTS_ERR_INVALID_TYPE" ] && LUM_GETOPTS_ERR_INVALID_TYPE=170
 [ -z "$LUM_GETOPTS_ERR_INVALID_FLAG" ] && LUM_GETOPTS_ERR_INVALID_FLAG=171
@@ -106,19 +106,19 @@ lum::fn lum::getopts::def
 #
 # Set argument parser option definitions.
 #
-# ((id))        The id of the parsing rules (see ``lum::getopts::init``).
+# ((id))        The id of the parsing rules (see $see(lum::getopts::init);).
 #
 # ((flag))      A unique single character for the option (e.g. "v").
 #
 # ((name))      A unique single-word sName for the option (e.g. "verbose").
 #
 # ((type))      The type of option determines how it handles values.
-#           See ``lum::getopts::def.type`` for details.
+#           See $see(,type); for details.
 #
 # The last three arguments can be passed multiple times, so long as it's in
 # complete sets of three. 
 #
-# See ``lum::getopts::def.err`` for a list of error codes.
+# See $see(,err); for a list of error codes.
 #
 lum::getopts::def() {
   [ $# -lt 4 ] && lum::help::usage
@@ -172,21 +172,15 @@ lum::getopts::def() {
   done
 }
 
-lum::fn lum::getopts::def.err 2
-#$ `{int}`
-#
-# Error codes for ``lum::getopts::def`` function.
+#$ lum::getopts::def,err - Error codes for lum::getopts::def
 #
 # $var(LUM_GETOPTS_ERR_INVALID_TYPE);  - The ((type)) was not a valid type.
 # $var(LUM_GETOPTS_ERR_FLAG_EXIST);  - The ((flag)) is already in use.
 # $var(LUM_GETOPTS_ERR_NAME_EXISTS);  - The ((name)) is already in use.
 #
-#: lum::getopts::def.err
+#: lum::getopts::def,err
 
-lum::fn lum::getopts::def.type 2
-#$ `{str}`
-#
-# The ((type)) argument for ``lum::getopts::def`` function.
+#$ lum::getopts::def,type - The ((type)) argument for lum::getopts::def
 #
 # A single character that identifies the type of option.
 #
@@ -199,14 +193,14 @@ lum::fn lum::getopts::def.type 2
 # ``+`` = An array list flag that may be specified more than once.
 #       This type is stored differently than other types.
 #
-#: lum::getopts::def.type
+#: lum::getopts::def,type
 
 lum::fn lum::getopts::parse 
 #$ <<id>> <<opts>> [[params...]]
 #
 # Parse command line parameters with ``getopts``
 #
-# ((id))      The id of the parsing rules (see ``lum::getopts::init``).
+# ((id))      The id of the parsing rules (see $see(lum::getopts::init);).
 #
 # ((opts))    Bitwise option.
 #         ``1`` = Display error messages.
@@ -214,7 +208,7 @@ lum::fn lum::getopts::parse
 #
 # The rest of the parameters are assumed to be the command line arguments.
 #
-# See ``lum::getopts::parse.err`` for a list of error codes.
+# See $see(,err); for a list of error codes.
 #
 lum::getopts::parse() {
   [ $# -lt 2 ] && lum::help::usage
@@ -264,12 +258,9 @@ lum::getopts::parse() {
   return 0
 }
 
-lum::fn lum::getopts::parse.err 2
-#$ `{int}`
-#
-# Error codes for ``lum::getopts::parse`` function.
+#$ lum::getopts::parse,err - Error codes for lum::getopts::parse
 #
 # $var(LUM_GETOPTS_ERR_INVALID_FLAG);  - The ((flag)) was not recognized.
 # $var(LUM_GETOPTS_ERR_MISSING_VAL);  - The ((flag)) was missing a mandatory value.
 #
-#: lum::getopts::parse.err
+#: lum::getopts::parse,err

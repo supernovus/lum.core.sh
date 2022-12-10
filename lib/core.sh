@@ -1,5 +1,5 @@
-#@lib: lum::core
-#@desc: Core library
+#$< lum::core
+# Core library
 
 invalid_bash() {
   echo "Must use Bash version 4.4 or higher" >&2

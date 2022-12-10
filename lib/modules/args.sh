@@ -1,5 +1,5 @@
-#@lib: lum::args
-#@desc: Argument related functions
+#$< lum::args
+# Argument related functions
 
 lum::fn lum::args::has 
 #$ <<want>> <<values...>>

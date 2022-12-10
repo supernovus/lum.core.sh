@@ -1,6 +1,6 @@
-#@lib: lum::readline
-#@desc: For some reason Bash disables completion when using `read -e`;
-#@desc: That ridiculous decision has made this library necessary.
+#$< lum::readline
+# For some reason Bash disables completion when using `read -e`;
+# That ridiculous decision has made this library necessary.
 
 lum::fn lum::readline 4
 #$ - Enable the readline wrapper

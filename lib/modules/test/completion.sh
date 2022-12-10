@@ -14,7 +14,7 @@ lum::test::completion() {
   case "$1" in
     "lum::help"|"//h")
       local -A knownTopics
-      lum::var::mergeMaps knownHelpTopics LUM_FN_FILES LUM_ALIAS_FN
+      lum::var::merge knownHelpTopics LUM_FN_FILES LUM_ALIAS_FN
       COMPREPLY+=("${!knownHelpTopics[@]}")
     ;;
   esac

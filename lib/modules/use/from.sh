@@ -1,5 +1,4 @@
-#@lib: lum::use::from
-#@func: 1
+#$< lum::use::from
 
 lum::fn lum::use::from
 #$ <<path>>

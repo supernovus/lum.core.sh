@@ -1,5 +1,5 @@
-#@lib: lum::core /bootstrap
-#@desc: Submodule defining functions required by everything else.
+#$< lum::core /bootstrap
+# Submodule defining functions required by everything else.
 
 ### Proto-bootstrap functions
 
@@ -455,7 +455,8 @@ lum::fn::help --core -f '*' \
     fmt-pre arg opt syntax \
   -m 2 summary \
     fmt-pre \
-  -g more fmt-pre value param arg opt syntax fmt-end
+  -g more fmt-pre value param arg opt syntax fmt-end \
+  -g docs fmt-pre value syntax fmt-end escape
 
 lum::fn lum::fn 1 -h opts more
 lum::fn lum::var 5 -h 0 more

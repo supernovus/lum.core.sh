@@ -1,5 +1,5 @@
-#@lib: lum::use::pkg
-#@desc: Support for loading lum.sh PACKAGE.conf files.
+#$< lum::use::pkg
+# Support for loading lum.sh PACKAGE.conf files.
 
 [ -z "$LUM_CORE_PKG_DIR" ] && LUM_CORE_PKG_DIR="$(dirname "$LUM_CORE_LIB_DIR")"
 

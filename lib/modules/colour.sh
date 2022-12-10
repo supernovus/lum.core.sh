@@ -1,5 +1,5 @@
-#@lib: lum::colour
-#@desc: ANSI Colours for your terminal
+#$< lum::colour
+# ANSI Colours for your terminal
 
 [ -z "$LUM_COLOUR_TEST" ] && LUM_COLOUR_TEST=1
 

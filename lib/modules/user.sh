@@ -1,5 +1,5 @@
-#@lib: lum::user
-#@desc: User information functions
+#$< lum::user
+# User information functions
 
 [ -z "$LUM_USER_CONF_DIR" ] && LUM_USER_CONF_DIR=".lum"
 
