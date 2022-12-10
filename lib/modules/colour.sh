@@ -1,7 +1,7 @@
 #$< lum::colour
 # ANSI Colours for your terminal
 
-[ -z "$LUM_COLOUR_TEST" ] && LUM_COLOUR_TEST=1
+lum::var -i LUM_COLOUR_TEST =? 1
 
 lum::fn lum::colour::isSupported
 #$ --

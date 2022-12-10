@@ -4,6 +4,8 @@
 
 lum::use lum::themes::default lum::use::pkg lum::help::list
 
+LUM_HELP_DEFAULT_TOPIC="lum::test::shell"
+
 lum::var -P LUM_SHELL_ \
   CTX PROMPT \
   STMT = "/" \
@@ -12,10 +14,11 @@ lum::var -P LUM_SHELL_ \
   -A= STMTS \
     'c' = "lum::test::shell::ctx" \
     'C' = "lum::test::shell::submode" \
-    'h' = "lum::test::shell::help" \
-    'H' = "help" \
-    'u' = "lum::use" \
-    'U' = "lum::use --reload" \
+    'l' = "lum::help::topics 3" \
+    'h' = "lum::help" \
+    'H' = "@help" \
+    'u' = "@lum::use" \
+    'U' = "@lum::use --reload" \
     'p' = "lum::use::pkg" \
     ';' = "history -c" \
     ':' = "eval" \
@@ -33,6 +36,7 @@ lum::fn lum::test::shell 0 -a "$SCRIPTNAME" 1 0 -h 0 more
 #
 # $shell(q);          → Exit shell normally.
 # $shell(Q);          → Exit shell, do not save history.
+# $shell(l); [[find]]   → Get a list of library functions/help topics.
 # $shell(h); [[topic]]  → Get library help (see $see(lum::help);).
 # $shell(H); [[topic]]  → Get bash internals help.
 # $shell(p); <<pkg>>    → Enable the ((pkg)) (see $see(lum::use::pkg);).
@@ -80,7 +84,7 @@ lum::test::shell() {
       "${LSS}Q")
         return 0
       ;;
-      "${LSS}"*)
+      "${LSS}"*) 
         lum::test::shell::stmt "$line"
       ;;
       *)
@@ -102,10 +106,17 @@ lum::test::shell::stmt() {
   local line="${1/"${LUM_SHELL_STMT}"}"
   local sid="${line:0:1}" sarg="${line:2}"
   local scmd="${LUM_SHELL_STMTS[$sid]}"
-  local CE="${LT[error]}" EC="${LT[end]}"
   if [ -n "$scmd" ]; then
-    $scmd "$sarg"
+    case "${scmd:0:1}" in
+      @)
+        ${scmd:1} $sarg
+      ;;
+      *)
+        $scmd "$sarg"
+      ;;
+    esac
   else
+    local CE="${LT[error]}" EC="${LT[end]}"
     lum::warn "${CE}error:${EC} statement '${CE}$1${EC}' is not valid"
   fi
 }

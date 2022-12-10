@@ -1,4 +1,4 @@
-#$< lum::fn
+#$< lum::fn::more
 # Additional function related methods
 
 lum::fn lum::fn::list

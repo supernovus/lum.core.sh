@@ -1,7 +1,7 @@
 #< lum::core /var
 # Variable related functions
 
-[ -z "$LUM_NEED_ERRCODE" ] && LUM_NEED_ERRCODE=199
+lum::var -i LUM_NEED_ERRCODE =? 199
 
 lum::fn lum::var::is
 #$ <<varname>>

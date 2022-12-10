@@ -17,7 +17,7 @@ lum::fn sort-usage 2
 #
 #: sort-usage
 
-lum::use lum::themes::default
+lum::use lum::themes::default lum::var::more
 
 declare -a SORTOPTS
 

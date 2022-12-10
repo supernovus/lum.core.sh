@@ -1,11 +1,10 @@
 #$< lum::core /use
 # Library module loading system
 
-[ -z "$LUM_USE_ERRCODE" ] && LUM_USE_ERRCODE=222
-
 lum::var -P LUM_ \
   -a LIB_DIRS CONF_DIRS CONF_ALIASES \
-  -A USE_NAMES USE_FILES LIB_PREFIX_DIR
+  -A USE_NAMES USE_FILES LIB_PREFIX_DIR \
+  -i USE_ERRCODE =? 222
 
 lum::fn::alias::group CONF 0 LUM_CONF_ALIASES
 

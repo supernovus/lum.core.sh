@@ -1,7 +1,7 @@
 #$< lum::user
 # User information functions
 
-[ -z "$LUM_USER_CONF_DIR" ] && LUM_USER_CONF_DIR=".lum"
+lum::var LUM_USER_CONF_DIR =? ".lum"
 
 lum::use lum::use::from
 

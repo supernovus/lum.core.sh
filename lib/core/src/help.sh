@@ -1,16 +1,16 @@
 #$< lum::core /help
 # Fundamental features for the help system
 
-[ -z "$LUM_USAGE_TITLE" ] && LUM_USAGE_TITLE="usage: "
-[ -z "$LUM_USAGE_MORE_INFO" ] && LUM_USAGE_MORE_INFO=1
-[ -z "$LUM_USAGE_STACK" ] && LUM_USAGE_STACK=0
-[ -z "$LUM_WARN_LVL" ] && LUM_WARN_LVL=-1
-[ -z "$LUM_ERR_LVL" ] && LUM_ERR_LVL=2
-
-declare -gA LUM_THEME
-
-lum::var -P LUM_HELP_ \
+lum::var -A LUM_THEME -i \
+  LUM_WARN_LVL =? -1 \
+  LUM_ERR_LVL  =? 2 \
+  -P LUM_USAGE_ \
+  MORE_INFO =? 1 \
+  STACK     =? 0 \
+  -- TITLE  =? "usage: " \
+  -P LUM_HELP_ \
   COMMAND \
+  DEFAULT_TOPIC \
   START_MARKER = '#$' \
   END_MARKER   = '#:' \
   -A= WANT \
@@ -42,7 +42,7 @@ lum::help() {
   local -i lineWidth="$(lum::help::width)"
 
   if [ "$tName" = "0" ]; then 
-    fName="${FUNCNAME[1]}"
+    fName="${LUM_HELP_DEFAULT_TOPIC:-${FUNCNAME[1]}}"
     tName="$fName"
   else
     fName="${tName/,*}"
