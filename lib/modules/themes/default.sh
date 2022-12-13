@@ -6,6 +6,7 @@ lum::use lum::colour
 LUM_THEME[end]=$(lum::colour end)
 
 LUM_THEME[error]=$(lum::colour bold red)
+LUM_THEME[warn]=$(lum::colour dark yellow)
 
 LUM_THEME[diag.func]=$(lum::colour yellow)
 LUM_THEME[diag.file]=$(lum::colour blue)

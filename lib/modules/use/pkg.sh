@@ -5,7 +5,7 @@
 
 LUM_INST_PKG="$(dirname "$LUM_CORE_PKG_DIR")"
 
-declare -gi LUM_INST_DEV=0
+declare -gi LUM_INST_DEV=0 LUM_USE_PKG_FATAL=1
 declare -ga LUM_PKG_ROOTS=("$LUM_INST_PKG")
 
 # Internal function to detect the core installation type
@@ -38,13 +38,13 @@ else
 fi
 
 lum::use::pkg() {
-  local pkgdir="$(lum::pkg::find "$@")"
-  [ $? -eq 0 ] && lum::use::pkg::conf "$pkgdir"
+  local pkgdir="$(lum::pkg::find "$1")"
+  [ $? -eq 0 ] && lum::use::pkg::conf "$pkgdir" "$2"
 }
 
 lum::pkg::find() {
   local pkg="${1/::/-}"
-  local -i fatal="${2:-1}"
+  local -n fatal="LUM_USE_PKG_FATAL"
 
   [ $LUM_INST_DEV -eq 1 ] && pkg="${pkg/lum-/}"
 
@@ -61,10 +61,10 @@ lum::pkg::find() {
 }
 
 lum::use::pkg::conf() {
-  local pkgdir="$1" lib ns
+  local pkgdir="$1" from="$2" lib ns spec
 
   local PACKAGE VERSION
-  local -a CALLED
+  local -a CALLED AUTO
   local -A BIN LIB DEPS
 
   . "$pkgdir/PACKAGE.conf"
@@ -74,4 +74,25 @@ lum::use::pkg::conf() {
     ns="${LIB[$lib]}"
     lum::use::libdir "$libdir" "$ns"
   done
+
+  for spec in "${AUTO[@]}"; do
+    lum::use::pkg::conf-auto "$from" $spec
+  done
+}
+
+lum::use::pkg::conf-auto() {
+  local from="$1" when="$2" type="$3" target="$4"
+  if [[ $when == "*" || $from =~ $when ]]; then
+    case "$type" in
+      src)
+        . "$pkgdir/$target"
+      ;;
+      use)
+        lum::use "$target"
+      ;;
+      *)
+        lum::warn "unknown AUTO action '$type'"
+      ;;
+    esac
+  fi
 }

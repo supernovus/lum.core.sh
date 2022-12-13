@@ -6,7 +6,7 @@ lum::var -A LUM_THEME -i \
   LUM_ERR_LVL  =? 2 \
   -P LUM_USAGE_ \
   MORE_INFO =? 1 \
-  STACK     =? 0 \
+  LVL       =? -1 \
   -- TITLE  =? "usage: " \
   -P LUM_HELP_ \
   COMMAND \
@@ -225,9 +225,9 @@ lum::fn lum::warn
 lum::warn() {
   [ $# -lt 1 ] && lum::help::usage
   local msg="$1" 
-  local -i DL="${2:-$LUM_WARN_LVL}"
+  local -i wantLvl="${2:-$LUM_WARN_LVL}"
   echo -e "$1" >&2
-  [ $DL -gt -1 ] && lum::help::diag $DL >&2
+  [ $wantLvl -gt -1 ] && lum::help::diag $wantLvl >&2
 }
 
 lum::fn lum::err
@@ -241,51 +241,126 @@ lum::fn lum::err
 #              If set to ``-1`` then exit won't be called.
 #
 # ((diagLvl))      Passed to ``lum::help::diag`` if greater than ``-1``.
-#              Default can be changed via ``LUM_LVL``.
+#              Default can be changed via ``LUM_ERR_LVL``.
 #
 lum::err() {
   [ $# -lt 1 ] && lum::help::usage
   local msg="$1" 
-  local -i errCode="${2:-1}" DL="${3:-$LUM_ERR_LVL}"
+  local -i errCode="${2:-1}" wantLvl="${3:-$LUM_ERR_LVL}"
   echo -e "$1" >&2
-  [ $DL -gt -1 ] && lum::help::diag $DL >&2
+  [ $wantLvl -gt -1 ] && lum::help::diag $wantLvl >&2
   exit $errCode
 }
 
-lum::fn lum::help::usage
-#$ [[funcname]] [[errcode=100]]
+lum::fn lum::help::usage 0 -h 0 more
+#$ [[options...]] [[message]]
 #
 # Show usage summary for a function.
 #
-# ((funcname))  Name of the function (e.g. ``lum::help::usage``)
-#           If not specified, or set to ``0``, we use the name of the 
-#           calling function.
+# ((message))           Optional error message.
 #
-# ((errcode))   Error code to return when exiting script.
-#           If set to ``-1`` then exit won't be called.
+# ((options)):
 #
+#  $i(-f); <<funcname>>    Name of the function (e.g. ``lum::help::usage``)
+#                   If not specified, we use the calling function.
+#  $i(-e); <<errcode>>     Error code to return when exiting script.
+#                   If set to ``-1``, exit won't be called. Default: ``100``
+#  $i(-d); <<diagLvl>>     Passed to ``lum::help::diag`` if greater than ``-1``.
+#                   Default can be changed via ``LUM_USAGE_LVL``. 
 lum::help::usage() {
-  local fName want errCode="${2:-100}" DL
+  local fName
+  local -i errCode=100 wantLvl=$LUM_USAGE_LVL msgLvl=-1
 
-  if [ -z "$1" -o "$1" = "0" ]; then
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -f)
+        fName="$2"
+        shift 2
+      ;;
+      -e)
+        errCode="$2"
+        shift 2
+      ;;
+      -d)
+        wantLvl="$2"
+        shift 2
+      ;;
+      *)
+        break;
+      ;;
+    esac
+  done
+
+  if [ -z "$fName" ]; then
     fName="${FUNCNAME[1]}"
-    DL=2
-  else
-    fName="$1"
-    DL=1
   fi
 
-  want="$(lum::help $fName 1)"
+  local want="$(lum::help $fName 1)"
+  [ -z "$want" ] && msgLvl=$wantLvl
+
+  if [ -n "$1" ]; then
+    lum::warn "${LUM_THEME[error]}$1${LUM_THEME[end]}" $msgLvl
+  fi
+
   if [ -n "$want" ]; then
     [ "$LUM_USAGE_TITLE" != "0" ] && want="${LUM_USAGE_TITLE}$want"
-    echo "$want" >&2
-    if [ "$LUM_USAGE_STACK" != "0" ]; then 
-      lum::help::diag $DL >&2
-    elif [ -n "$LUM_HELP_COMMAND" -a "$LUM_USAGE_MORE_INFO" != "0" ]; then
+    lum::warn "$want" $wantLvl
+    if [ -n "$LUM_HELP_COMMAND" -a "$LUM_USAGE_MORE_INFO" != "0" ]; then
       lum::help::moreinfo >&2
     fi
   fi
+
   exit $errCode
+}
+
+lum::fn lum::help::register 0 -h 0 more
+#$ [[options...]] [[cmd...=help$spc();--help]]
+#
+# Register a help command for a CLI script
+#
+# ((cmd))       A command name to use for help.
+#
+# ((options)):
+#
+#  $i(-l); <<list>>  Subsequent ((cmd)) args should be added to this list.
+# 
+# Additional ((cmd)) names may be specified, but only the first will
+# be set as the primary name and will be assigned to ``LUM_HELP_COMMAND``.
+# You may specify ((options)) between sets of ((cmd)) arguments.
+#
+lum::help::register() {
+  lum::warn "help::register($@)"
+  if [ $# -eq 0 ]; then
+    ## Use basic defaults.
+    lum::help::register help --help
+    return
+  fi
+
+  local list=0
+  local -i added=0
+  while [ $# -gt 0 ]; do
+    case "$1" in 
+      -l)
+        list="$2"
+        shift 2
+      ;;
+      *)
+        if [ -z "$LUM_HELP_COMMAND" ]; then
+          lum::fn::alias lum::help "$1" 1 "$list"
+          LUM_HELP_COMMAND="$1"
+        else
+          lum::fn::alias lum::help "$1" 0 "$list"
+        fi
+        ((added++))
+        shift
+      ;;
+    esac
+  done
+
+  if [ $added -eq 0 ]; then
+    ## Use defaults with a custom list.
+    lum::help::register -l "$list" help --help
+  fi
 }
 
 #$>

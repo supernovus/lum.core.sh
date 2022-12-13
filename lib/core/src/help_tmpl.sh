@@ -99,7 +99,7 @@ lum::help::tmpl--init() {
   ## Set up the default template feature definitions.
   local LHT=lum::help::tmpl
   lum::help::def arg M $LHT::arg '(.*?)<<(\w+)(\.\.\.)?>>(.*)'
-  lum::help::def opt M $LHT::opt '(.*?)\[\[(\w+)(=)?(\S+)?(\.\.\.)?\]\](.*)'
+  lum::help::def opt M $LHT::opt '(.*?)\[\[(\w+)(\.\.\.)?(=)?(\S+)?\]\](.*)'
   lum::help::def param M $LHT::hl '(.*?)\(\((.*?)\)\)(.*?)'
   lum::help::def value M $LHT::hl '(.*?)``(.*?)``(.*)' "'"
   lum::help::def syntax M $LHT::hl '(.*?)`\{(.*?)\}`(.*)'
@@ -208,9 +208,9 @@ lum::help::tmpl::opt() {
   local before="$2"
   local after="$7"
   local arg="$3"
-  local eq="$4"
-  local def="$5"
-  local rep="$6"
+  local rep="$4"
+  local eq="$5"
+  local def="$6"
 
   param="${TC[:]}[${TC[arg]}$arg${TC[:]}"
   [ "$eq" = "=" -a -n "$def" ] && param+="$eq${TC[def]}$def${TC[:]}"
@@ -314,6 +314,7 @@ lum::help::tmpl::fmt::see() {
 }
 
 lum::help::tmpl::fmt::esc() {
+  #lum::warn "fmt::esc"
   case "${tmplOptions[class]}" in
     fmt-pre)
       local cc="${#LUM_HELP_FMT_ESC[@]}"
@@ -327,6 +328,11 @@ lum::help::tmpl::fmt::esc() {
       lum::err "how did we get here?"
     ;;
   esac
+}
+
+lum::help::tmpl::fmt::spc() {
+  local -i spaceOut="${1:-1}"
+  repValue="$(lum::str::repeat " " $spaceOut)"
 }
 
 #$ lum::help::tmpl,fmt - Format 
@@ -345,5 +351,6 @@ lum::help::tmpl::fmt::esc() {
 #    $p(caption);    → If specified, a caption will be embedded in the line.
 #    You can specify either one without specifying the other.
 #    However to specify BOTH, they MUST be in the order shown.
+# $i(*); `{$\\spc(len?)\\;}` Insert ((len)) number of spaces (default ``1``).
 #
 #: lum::help::tmpl,fmt

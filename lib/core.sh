@@ -15,6 +15,7 @@ if [ -z "$LUM_CORE" ]; then
   declare -gr LUM_CORE_LIB_DIR="$(dirname ${BASH_SOURCE[0]})"
   declare -gr LUM_CORE=1
   declare -gi LUM_CORE_REBOOT=0
+  declare -gA LUM_DEBUG
 elif [ -z "$LUM_CORE_LIB_DIR" ]; then
   echo "Invalid lum-core environment"
   exit 160

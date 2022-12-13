@@ -2,6 +2,8 @@
 # A testing shell for lum.sh libraries
 # Not meant for use by anything other than lum-core/bin/test.sh
 
+#-lts "loaded" "lum::test::shell"
+
 lum::use lum::themes::default lum::use::pkg lum::help::list
 
 LUM_HELP_DEFAULT_TOPIC="lum::test::shell"

@@ -3,11 +3,71 @@
 
 ### Proto-bootstrap functions
 
+## A variable that only need to exist when rebooting.
+if [ $LUM_CORE_REBOOT -gt 0 ]; then 
+  unset LUM_VAR_REBOOTED
+  declare -gA LUM_VAR_REBOOTED
+fi
+
+#$ lum::debug - Simple debugging statements
+# What this does depends on the number of arguments.
+#
+# `{-- no arguments --}`       Display ``LUM_DEBUG`` variable declaration.
+#
+# <<key>>                    Show value of ((key)).
+#
+# <<key>> <<val>>              Set ((key)) to ((val)) (must be an int).
+#
+# <<key>> <<val>> <<msg>>        Show ((msg)) if the current ((key)) value is
+#                          greater than or equal to ((val)).
+#
+# <<key>> <<val>> <<c>> <<a...>>   Run command ((c)) with arguments ((a)) if
+#                          the current ((key)) value is >= ((val)).
+#
+lum::debug() {
+  if [ $# -eq 0 ]; then
+    declare -p LUM_DEBUG
+    return
+  fi
+
+  local dbgKey="$1"
+  if [ $# -eq 1 ]; then
+    echo "${LUM_DEBUG[$dbgKey]}"
+    return
+  fi
+
+  local -i dbgVal="$2"
+  if [ $# -eq 2 ]; then
+    LUM_DEBUG[$dbgKey]="$dbgVal"
+    return
+  fi
+
+  local -i testVal="${LUM_DEBUG[$dbgKey]}"
+  if [ "$testVal" -ge "$dbgVal" ]; then
+    shift 2
+    if [ $# -eq 1 ]; then
+      echo "$1"
+    else
+      "$@"
+    fi
+  fi
+}
+
+## Private function used by lum::var
+lum::var::+set() {
+  local VN="$1" VT="$2"
+  if [ $LUM_CORE_REBOOT -gt 0 -a -z "${LUM_VAR_REBOOTED[$VN]}" ]; then
+    unset $VN
+    LUM_VAR_REBOOTED[$VN]="$VT"
+  fi
+  declare -g $VT $VN
+}
+
 #$ lum::var - Declare global variables
 #
 # $h(Modifier options:);
 #
-# ``-A -a -i -r -n --``  → Following variables will use this declare type.
+# ``-A -a -i -n --``     → Following variables will use this declare type.
 # ``-P <<prefix>>``        → Following variables will be prefixed with this.
 # ``-S <<suffix>>``        → Following variables will be suffixed with this.
 #
@@ -49,7 +109,7 @@ lum::var() {
       ;;
       *) ## regular context
         case "$1" in
-          --|-A|-a|-i|-r|-n|-ir|-ri)
+          --|-A|-a|-i|-n)
             flag="$1"
             shift
           ;;
@@ -70,9 +130,8 @@ lum::var() {
             [ "$cmode" = "-a" -a $# -lt 3 ] && lum::help::usage
             [ "$cmode" = "-A" -a $# -lt 5 ] && lum::help::usage
             varname="$prefix$2$suffix"
-            declare -g $cmode $varname
+            lum::var::+set $varname $cmode
             local -n cvar="$varname"
-            [ $LUM_CORE_REBOOT -gt 0 ] && cvar=()
             shift 2
           ;;
           *)
@@ -89,13 +148,8 @@ lum::var() {
               shift 3
             else
               [ "$flag" = "-n" ] && lum::help::usage
+              [ $LUM_CORE_REBOOT -gt 0 ] && unset $varname
               declare -g $flag $varname
-              if [ $LUM_CORE_REBOOT -gt 0 ]; then
-                local -n __var="$varname"
-                [ "$flag" = "-A" -o "$flag" = "-a" ] \
-                  && __var=() \
-                  || __var=
-              fi
               shift
             fi
           ;;
@@ -199,9 +253,8 @@ lum::fn() {
 
 ### Bootstrap variables
 
-lum::var -P LUM_FN_ \
-  -i DEBUG = 0 \
-  -A FILES REGFN ALIAS FLAGS HELP \
+lum::var -A \
+  -P LUM_FN_ FILES REGFN ALIAS FLAGS HELP HELP_EXT \
   -P LUM_ALIAS_ FN GROUPS
 
 ### Main functions
@@ -337,6 +390,7 @@ lum::fn::help() {
       -g)
         [ $# -lt 2 ] && lum::help::usage
         gname="$(lum::var::id "$prefix$2$suffix" $case)"
+        [ $LUM_CORE_REBOOT -gt 0 ] && unset "$gname"
         declare -ga "$gname"
         local -n group="$gname"
         shift 2
@@ -358,6 +412,7 @@ lum::fn::help() {
           ;;
         esac
         if [ "$3" != '=' ]; then 
+          [ $LUM_CORE_REBOOT -gt 0 ] && unset $gname
           declare -ga "$gname"
           LUM_FN_HELP[$key]="$gname"
         fi
@@ -419,9 +474,16 @@ lum::fn::help() {
         shift
       ;;
       *)
-        [ -z "$gname" ] && lum::help::usage
-        group+=("$1")
-        shift
+        if [ -n "${LUM_FN_HELP_EXT[$1]}" ]; then
+          local -i extShift=1
+          ${LUM_FN_HELP_EXT[$1]} "$@"
+          shift $extShift
+        elif [ -n "$gname" ]; then
+          group+=("$1")
+          shift
+        else
+          lum::help::usage
+        fi
       ;;
     esac
   done  
@@ -460,6 +522,7 @@ lum::fn::help --core -f '*' \
 
 lum::fn lum::fn 1 -h opts more
 lum::fn lum::var 5 -h 0 more
+lum::fn lum::debug 5 -h 0 more
 lum::fn::help --core -f 'lum::fn::help' -m 0 more
 
 ### Extra documentation
