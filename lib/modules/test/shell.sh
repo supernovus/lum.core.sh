@@ -2,11 +2,12 @@
 # A testing shell for lum.sh libraries
 # Not meant for use by anything other than lum-core/bin/test.sh
 
-#-lts "loaded" "lum::test::shell"
++lts 1 "loaded" "lum::test::shell"
 
 lum::use lum::themes::default lum::use::pkg lum::help::list
 
-LUM_HELP_DEFAULT_TOPIC="lum::test::shell"
+LUM_HELP_DEFAULT_TOPIC='lum::test::shell'
+LUM_PKG_SCOPE='test'
 
 lum::var -P LUM_SHELL_ \
   CTX PROMPT \
@@ -21,7 +22,7 @@ lum::var -P LUM_SHELL_ \
     'H' = "@help" \
     'u' = "@lum::use" \
     'U' = "@lum::use --reload" \
-    'p' = "lum::test::shell::use-pkg" \
+    'p' = "lum::use::pkg" \
     ';' = "history -c" \
     ':' = "eval" \
     '@' = "lum::test::shell::prompt" \
@@ -167,10 +168,6 @@ lum::test::shell::prompt() {
 
 lum::test::shell::help() {
   lum::help "${1:-lum::test::shell}"
-}
-
-lum::test::shell::use-pkg() {
-  lum::use::pkg "$1" test
 }
 
 lum::test::shell::stmt-prefix() {

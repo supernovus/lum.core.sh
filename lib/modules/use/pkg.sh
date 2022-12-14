@@ -7,6 +7,7 @@ LUM_INST_PKG="$(dirname "$LUM_CORE_PKG_DIR")"
 
 declare -gi LUM_INST_DEV=0 LUM_USE_PKG_FATAL=1
 declare -ga LUM_PKG_ROOTS=("$LUM_INST_PKG")
+lum::var LUM_PKG_SCOPE =? '.'
 
 # Internal function to detect the core installation type
 lum::use::pkg--detect-core() {
@@ -39,7 +40,7 @@ fi
 
 lum::use::pkg() {
   local pkgdir="$(lum::pkg::find "$1")"
-  [ $? -eq 0 ] && lum::use::pkg::conf "$pkgdir" "$2"
+  [ $? -eq 0 ] && lum::use::pkg::conf "$pkgdir"
 }
 
 lum::pkg::find() {
@@ -61,7 +62,7 @@ lum::pkg::find() {
 }
 
 lum::use::pkg::conf() {
-  local pkgdir="$1" from="$2" lib ns spec
+  local pkgdir="$1" lib ns spec
 
   local PACKAGE VERSION
   local -a CALLED AUTO
@@ -76,13 +77,13 @@ lum::use::pkg::conf() {
   done
 
   for spec in "${AUTO[@]}"; do
-    lum::debug lum::use::pkg 2 "AUTO[$from]=($spec)" 
-    lum::use::pkg::conf-auto "$from" $spec
+    lum::use::pkg::conf-auto $spec
   done
 }
 
 lum::use::pkg::conf-auto() {
-  local from="$1" when="$2" type="$3" target="$4"
+  local when="$1" type="$2" target="$3"
+  local from="$LUM_PKG_SCOPE"
   if [[ $when == "*" || $from =~ $when ]]; then
     case "$type" in
       src)
