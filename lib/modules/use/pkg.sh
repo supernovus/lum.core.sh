@@ -76,6 +76,7 @@ lum::use::pkg::conf() {
   done
 
   for spec in "${AUTO[@]}"; do
+    lum::debug lum::use::pkg 2 "AUTO[$from]=($spec)" 
     lum::use::pkg::conf-auto "$from" $spec
   done
 }

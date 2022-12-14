@@ -39,6 +39,7 @@ lum::debug() {
   local -i dbgVal="$2"
   if [ $# -eq 2 ]; then
     LUM_DEBUG[$dbgKey]="$dbgVal"
+    echo "$dbgKey = $dbgVal"
     return
   fi
 
@@ -54,13 +55,15 @@ lum::debug() {
 }
 
 ## Private function used by lum::var
-lum::var::+set() {
+lum::var+() {
   local VN="$1" VT="$2"
   if [ $LUM_CORE_REBOOT -gt 0 -a -z "${LUM_VAR_REBOOTED[$VN]}" ]; then
     unset $VN
     LUM_VAR_REBOOTED[$VN]="$VT"
+    lum::debug lum::var 2 "#~ rebooted $VT $VN"
   fi
   declare -g $VT $VN
+  lum::debug lum::var 3 declare -p $VN
 }
 
 #$ lum::var - Declare global variables
@@ -130,7 +133,7 @@ lum::var() {
             [ "$cmode" = "-a" -a $# -lt 3 ] && lum::help::usage
             [ "$cmode" = "-A" -a $# -lt 5 ] && lum::help::usage
             varname="$prefix$2$suffix"
-            lum::var::+set $varname $cmode
+            lum::var+ $varname $cmode
             local -n cvar="$varname"
             shift 2
           ;;
@@ -148,8 +151,7 @@ lum::var() {
               shift 3
             else
               [ "$flag" = "-n" ] && lum::help::usage
-              [ $LUM_CORE_REBOOT -gt 0 ] && unset $varname
-              declare -g $flag $varname
+              lum::var+ $varname $flag
               shift
             fi
           ;;
@@ -390,8 +392,7 @@ lum::fn::help() {
       -g)
         [ $# -lt 2 ] && lum::help::usage
         gname="$(lum::var::id "$prefix$2$suffix" $case)"
-        [ $LUM_CORE_REBOOT -gt 0 ] && unset "$gname"
-        declare -ga "$gname"
+        lum::var+ $gname -a
         local -n group="$gname"
         shift 2
       ;;
@@ -412,8 +413,7 @@ lum::fn::help() {
           ;;
         esac
         if [ "$3" != '=' ]; then 
-          [ $LUM_CORE_REBOOT -gt 0 ] && unset $gname
-          declare -ga "$gname"
+          lum::var+ $gname -a
           LUM_FN_HELP[$key]="$gname"
         fi
         local -n group="$gname"
@@ -514,7 +514,7 @@ lum::fn::help --core -f '*' \
   -m 0 default \
     fmt-pre value param syntax fmt-end \
   -m 1 usage \
-    fmt-pre arg opt syntax \
+    fmt-pre arg opt syntax fmt-end \
   -m 2 summary \
     fmt-pre \
   -g more fmt-pre value param arg opt syntax fmt-end \

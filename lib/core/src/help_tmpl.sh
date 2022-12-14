@@ -122,13 +122,15 @@ lum::fn lum::help::tmpl 4 -h 0 docs -h fmt docs
 # [-+-] ``arg``          `{$esc(<<mandatory>>);}`
 # [-+-] ``opt``          `{$esc([[optional=default]]);}`
 # [++-] ``syntax``       `{$esc(`{syntax}`);}`
-# [+--] ``fmt-end``      `{$\\fn{args}\\;}`
+# [++-] ``fmt-end``      `{$\\fn{args}\\;}`
 #
 # [012] ← Each column represents a help mode.
 #         ``+`` = Supported by default in that mode.
 #         ``-`` = Not supported by default.
 #
 # Extra help group ``more`` includes ALL the defs, in the order shown.
+# Special help group ``docs`` also includes an ``escape`` def which allows
+# double forward slashes to be used in docs requiring examples of the above.
 #
 # See $see(,fmt); for a list of tag names supported.
 #
@@ -335,6 +337,10 @@ lum::help::tmpl::fmt::spc() {
   repValue="$(lum::str::repeat " " $spaceOut)"
 }
 
+lum::help::tmpl::fmt::del() {
+  repValue=""
+}
+
 #$ lum::help::tmpl,fmt - Format 
 #
 # $i(*); Colour-only codes: $b(b); $h(h); $i(i); $p(p); $e(e); $code(code); $val(val);.
@@ -351,6 +357,6 @@ lum::help::tmpl::fmt::spc() {
 #    $p(caption);    → If specified, a caption will be embedded in the line.
 #    You can specify either one without specifying the other.
 #    However to specify BOTH, they MUST be in the order shown.
-# $i(*); `{$\\spc(len?)\\;}` Insert ((len)) number of spaces (default ``1``).
+# $i(*); `{$\\spc(len?)\\;}` Insert $p(len); number of spaces (default ``1``).
 #
 #: lum::help::tmpl,fmt

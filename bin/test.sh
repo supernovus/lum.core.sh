@@ -4,11 +4,11 @@ LUM_CORE_TEST_SH="$(realpath -e "$0")"
 LUM_CORE_BIN_DIR="$(dirname "$LUM_CORE_TEST_SH")"
 LUM_CORE_PKG_DIR="$(dirname "$LUM_CORE_BIN_DIR")"
 
-declare -i LUM_SHELL_RESTART=1 LUM_SHELL_DEBUG
+declare -i LUM_SHELL_RESTART=1 LUM_SHELL_DEBUG=0
 
 ## Extremely basic debugging
 +lts() {
-  [ $LUM_SHELL_DEBUG != 0 ] &&  echo "«lts:$1»" "${@:2}" >&2
+  [ "$LUM_SHELL_DEBUG" != 0 ] && echo "«lts:$1»" "${@:2}" >&2
 }
 
 while [ $LUM_SHELL_RESTART -eq 1 ]; do

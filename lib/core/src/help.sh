@@ -314,12 +314,11 @@ lum::help::usage() {
 }
 
 lum::fn lum::help::register 0 -h 0 more
-#$ [[options...]] [[cmd...=help$spc();--help]]
+#$ [[options...]] [[cmd...=help$spc{};--help]]
 #
 # Register a help command for a CLI script
 #
-# ((cmd))       A command name to use for help.
-#
+# ((cmd))         A command name to use for help.
 # ((options)):
 #
 #  $i(-l); <<list>>  Subsequent ((cmd)) args should be added to this list.
@@ -329,7 +328,6 @@ lum::fn lum::help::register 0 -h 0 more
 # You may specify ((options)) between sets of ((cmd)) arguments.
 #
 lum::help::register() {
-  lum::warn "help::register($@)"
   if [ $# -eq 0 ]; then
     ## Use basic defaults.
     lum::help::register help --help

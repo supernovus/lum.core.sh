@@ -21,7 +21,7 @@ lum::var -P LUM_SHELL_ \
     'H' = "@help" \
     'u' = "@lum::use" \
     'U' = "@lum::use --reload" \
-    'p' = "lum::use::pkg" \
+    'p' = "lum::test::shell::use-pkg" \
     ';' = "history -c" \
     ':' = "eval" \
     '@' = "lum::test::shell::prompt" \
@@ -167,6 +167,10 @@ lum::test::shell::prompt() {
 
 lum::test::shell::help() {
   lum::help "${1:-lum::test::shell}"
+}
+
+lum::test::shell::use-pkg() {
+  lum::use::pkg "$1" test
 }
 
 lum::test::shell::stmt-prefix() {
