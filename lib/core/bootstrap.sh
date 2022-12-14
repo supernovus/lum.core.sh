@@ -3,11 +3,9 @@
 
 ### Proto-bootstrap functions
 
-## A variable that only need to exist when rebooting.
-if [ $LUM_CORE_REBOOT -gt 0 ]; then 
-  unset LUM_VAR_REBOOTED
-  declare -gA LUM_VAR_REBOOTED
-fi
+## A variable used when rebooting.
+[ $LUM_CORE_REBOOT -gt 0 ] && unset LUM_VAR_REBOOTED
+declare -gA LUM_VAR_REBOOTED
 
 #$ lum::debug - Simple debugging statements
 # What this does depends on the number of arguments.
