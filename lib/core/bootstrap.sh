@@ -8,19 +8,28 @@
 declare -gA LUM_VAR_REBOOTED
 
 #$ lum::debug - Simple debugging statements
-# What this does depends on the number of arguments.
 #
-# `{-- no arguments --}`       Display ``LUM_DEBUG`` variable declaration.
+# If no arguments are passed, output ``$LUM_DEBUG`` declaration and return.
 #
-# <<key>>                    Show value of ((key)).
+# $i(-k); <<key>>          The namespace key for subsequent commands.
+#                   Defaults to ``${FUNCNAME[1]}`` if not specified.
+#                   If no further args, output current ((key)) value.
 #
-# <<key>> <<val>>              Set ((key)) to ((val)) (must be an int).
+# $i(-s); <<cval>>         Set current ((key)) value to ((cval)) and return.
 #
-# <<key>> <<val>> <<msg>>        Show ((msg)) if the current ((key)) value is
-#                          greater than or equal to ((val)).
+# $i(-t); <<tval>>         The test value for subsequent commands.
+#                   Defaults to ``1`` if not specified.
+#                   If no further args, return ``0`` if test passes,
+#                   or return ``1`` if it fails.
 #
-# <<key>> <<val>> <<c>> <<a...>>   Run command ((c)) with arguments ((a)) if
-#                          the current ((key)) value is >= ((val)).
+# $i(-c);             Subsequent args are shell commands to be ran.
+#                   If set, at least one arg must be passed.
+#
+# [[args...]]         If $i(-c); mode is on, a set of commands to run.
+#                   Otherwise we output the args to $val(STDERR); with 
+#                   ``«$key»`` prepended as a header.
+#
+# The test is: $fmt(\v ${LUM_DEBUG[ \p $key \v ]} \: \. >= \. \p $tval \;);
 #
 lum::debug() {
   if [ $# -eq 0 ]; then
@@ -28,28 +37,64 @@ lum::debug() {
     return
   fi
 
-  local dbgKey="$1"
-  if [ $# -eq 1 ]; then
-    echo "${LUM_DEBUG[$dbgKey]}"
-    return
+  local dbgKey="${FUNCNAME[1]}"
+  local -i tstVal=1 curVal=0 runMode=0
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -k)
+        [ $# -lt 2 ] && lum::help::usage
+        dbgKey="$2"
+        shift 2
+        curVal="${LUM_DEBUG[$dbgKey]}"
+        [ $# -eq 0 ] && echo "$curVal" && return
+      ;;
+      -s)
+        [ $# -ne 2 ] && lum::help::usage
+        LUM_DEBUG[$dbgKey]="$2"
+        echo "$dbgKey = $dbgVal" >&2
+        return
+      ;;
+      -t)
+        [ $# -lt 2 ] && lum::help::usage
+        tstVal="$2"
+        shift 2
+        if [ $# -eq 0 ]; then 
+          [ "$curVal" -ge "$tstVal" ]
+          return $?
+        fi
+      ;;
+      -c)
+        [ $# -lt 2 ] && lum::help::usage
+        runMode=1
+        shift
+      ;;
+      *)
+        break
+      ;;
+    esac
+  done
+
+  local -i resCode
+  [ "$curVal" -ge "$tstVal" ]
+  resCode=$?
+
+  if [ $resCode -eq 0 -a $# -gt 0 ]; then
+    case "$runMode" in
+      0)
+        echo -e "«$dbgKey»" "$@" >&2
+      ;;
+      1)
+        "$@"
+        resCode=$?
+      ;;
+      *)
+        lum::err "how did you get here?"
+      ;;
+    esac
   fi
 
-  local -i dbgVal="$2"
-  if [ $# -eq 2 ]; then
-    LUM_DEBUG[$dbgKey]="$dbgVal"
-    echo "$dbgKey = $dbgVal"
-    return
-  fi
-
-  local -i testVal="${LUM_DEBUG[$dbgKey]}"
-  if [ "$testVal" -ge "$dbgVal" ]; then
-    shift 2
-    if [ $# -eq 1 ]; then
-      echo "$1"
-    else
-      "$@"
-    fi
-  fi
+  return $resCode
 }
 
 ## Private function used by lum::var
@@ -58,10 +103,10 @@ lum::var+() {
   if [ $LUM_CORE_REBOOT -gt 0 -a -z "${LUM_VAR_REBOOTED[$VN]}" ]; then
     unset $VN
     LUM_VAR_REBOOTED[$VN]="$VT"
-    lum::debug lum::var 2 "#~ rebooted $VT $VN"
+    lum::debug -k lum::var -t 2 "REBOOTED $VT $VN"
   fi
   declare -g $VT $VN
-  lum::debug lum::var 3 declare -p $VN
+  lum::debug -k lum::var -t 3 -c declare -p $VN
 }
 
 #$ lum::var - Declare global variables

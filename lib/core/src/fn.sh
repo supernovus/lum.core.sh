@@ -100,7 +100,7 @@ lum::fn::make() {
   local -a func=('function' "$1()" '{')
   shift
   func+=("$@" ';' '}')
-  lum::debug lum::fn 1 "lum::fn::make ${func[@]}"
+  lum::debug "${func[@]}"
   eval "${func[@]}"
 }
 

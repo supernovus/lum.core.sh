@@ -3,7 +3,7 @@
 
 lum::var -P LUM_ \
   -a LIB_DIRS CONF_DIRS CONF_ALIASES \
-  -A USE_NAMES USE_FILES LIB_PREFIX_DIR \
+  -A USE_NAMES USE_FILES LIB_PREFIX_DIR CONF_PREFIX_DIR \
   -i USE_ERRCODE =? 222
 
 lum::fn::alias::group CONF 0 LUM_CONF_ALIASES
@@ -147,7 +147,7 @@ lum::use::findPrefixed() {
   #echo "looking for $AF via prefix" >&2
   for prefix in "${!LUM_LIB_PREFIX_DIR[@]}"; do
     #echo "checking '$prefix' prefix" >&2
-    lum::str::startsWith "$AF $prefix" || continue
+    lum::str::startsWith "$AF" "$prefix" || continue
     AD="${LUM_LIB_PREFIX_DIR[$prefix]}"
     [ ! -d "$AD" ] && continue
     tryfile="${AF/$prefix/$AD\/}"

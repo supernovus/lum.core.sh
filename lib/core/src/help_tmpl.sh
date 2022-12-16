@@ -11,7 +11,8 @@ lum::var -P LUM_HELP_ \
      i = item \
      p = param \
      e = '!' \
-     code = syntax \
+     s = syntax \
+     v = value \
      val = value \
      -
 
@@ -73,7 +74,7 @@ lum::help::def() {
 
 #$ lum::help::def,opts - Help template handler options
 #
-# The $val(tmplOptions) var contains a bunch of information
+# The $v(tmplOptions) var contains a bunch of information
 # about the template. 
 #
 # TODO: document pre-defined keys.
@@ -315,6 +316,33 @@ lum::help::tmpl::fmt::see() {
   repValue="${TC[item]}$link${TC[;]}"
 }
 
+lum::help::tmpl::fmt::fmt() {
+  local word cc tc
+  local -i wlen=0 sp=0
+  repValue=""
+  for word in $1; do
+    if [ "${#word}" -eq 2 -a "${word:0:1}" = '\' ]; then
+      cc="${word:1:1}"
+      if [ "$cc" = '.' ]; then
+        repValue+=" "
+        sp=0
+        continue
+      fi
+      tc="${LUM_HELP_FMT_HL[$cc]}"
+      [ -z "$tc" ] && tc="$cc"
+      cc="${TC[$tc]}"
+      if [ -n "$cc" ]; then
+        repValue+="$cc"
+        sp=0
+        continue
+      fi
+    fi
+    [ $sp -gt 0 ] && repValue+=" "
+    repValue+="$word"
+    ((sp++))
+  done
+}
+
 lum::help::tmpl::fmt::esc() {
   #lum::warn "fmt::esc"
   case "${tmplOptions[class]}" in
@@ -337,13 +365,10 @@ lum::help::tmpl::fmt::spc() {
   repValue="$(lum::str::repeat " " $spaceOut)"
 }
 
-lum::help::tmpl::fmt::del() {
-  repValue=""
-}
-
 #$ lum::help::tmpl,fmt - Format 
 #
-# $i(*); Colour-only codes: $b(b); $h(h); $i(i); $p(p); $e(e); $code(code); $val(val);.
+# $i(*); Colour-only codes: $b(b); $h(h); $i(i); $p(p); $e(e); $s(s); $v(v);.
+# $i(*); `{$\\spc(len?)\\;}` Insert $p(len); number of spaces (default ``1``).
 # $i(*); `{$\\pad(len text...)\\;}` will pad the text with spaces.
 # $i(*); `{$\\var(varname)\\;}` will display the $p(varname); variable.
 # $i(*); `{$\\bool(varname on? off?)\\;}` show $p(off); if $p(name); is ``0``, or $p(on); otherwise.
@@ -357,6 +382,6 @@ lum::help::tmpl::fmt::del() {
 #    $p(caption);    → If specified, a caption will be embedded in the line.
 #    You can specify either one without specifying the other.
 #    However to specify BOTH, they MUST be in the order shown.
-# $i(*); `{$\\spc(len?)\\;}` Insert $p(len); number of spaces (default ``1``).
+#$line();
 #
 #: lum::help::tmpl,fmt

@@ -46,7 +46,7 @@ lum::help::cli() {
   lum::help "$ARGS" $usage
 }
 
-#$ lum::help::cli#opts - CLI options
+#$ lum::help::cli,opts - CLI options
 #
 # ``-P <<package>>``      Add a specific Lum.sh package.
 # ``-L <<libname>>``      Add a library from a package.
@@ -61,4 +61,4 @@ lum::help::cli() {
 #                     If a ((topic)) is specified with ``-l``, show only 
 #                     topics matching that string as a simple RegEx.
 #
-#: lum::help::cli#opts
+#: lum::help::cli,opts

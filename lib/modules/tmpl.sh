@@ -18,7 +18,7 @@ lum::fn lum::tmpl
 # replacement for the block.
 #
 # ((optvar))      The name of a ``-A`` var of options.
-#             See ``lum::tmpl.opts`` for details.
+#             See $see(,opts); for a list of valid options.
 #
 lum::tmpl() {
   local -A __
@@ -64,10 +64,9 @@ lum::tmpl() {
   echo "${__[text]}"
 }
 
-lum::fn lum::tmpl.opts 6
-#$ - Common settings
+#$ lum::tmpl,opts - Common settings
 #
-# Option       Default          Description
+# $b(Option);       $b(Default);          $b(Description);
 #
 # ``text``       ''               The template text to parse.
 #                               If left blank, ``file`` is used instead.
@@ -81,20 +80,20 @@ lum::fn lum::tmpl.opts 6
 #                               for every key in the ``vars`` array.
 # ``exts``        ''              Space-separated list of extensions.
 #                                ``if`` → Adds ``IF ...`` ``ELSE`` ``ENDIF``
-#: lum::tmpl.opts
+#: lum::tmpl,opts
 
-#$ lum::tmpl.opts#if - Simple IF statements
+#$ lum::tmpl,if - Simple IF statements
 #
 # Currently only supports binary-branch, non-nested conditional statements.
 # Examples using the default ((bls)) and ((ble)) strings for simplicity.
 #
-# $val({{IF ((condition))}});
-# $code(Template text if condition is true);
-# $val({{ELSE}});
-# $code(Template text if condition is false);
-# $val({{ENDIF}});
+# $v({{IF ((condition))}});
+# $s(Template text if condition is true);
+# $v({{ELSE}});
+# $s(Template text if condition is false);
+# $v({{ENDIF}});
 # 
-#: lum::tmpl.opts#if
+#: lum::tmpl,if
 
 lum::tmpl::+if() {
   __[ifre]="(.*?)${__[bls]}\s*IF\s+(.*?)${__[ble]}(.*?)${__[bls]}"
