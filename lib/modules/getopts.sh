@@ -22,19 +22,19 @@ lum::fn lum::getopts
 # dynamically named functions that call the various ``lum::getopts::*`` 
 # functions, automatically supplying the ((id)) argument.
 #
-# ((${prefix}def))    → $val(lum::getopts::def);
-# ((${prefix}parse))  → $val(lum::getopts::parse);
+# ((${prefix}def))    → $v(lum::getopts::def);
+# ((${prefix}parse))  → $v(lum::getopts::parse);
 #
 # It also generates a couple functions that return the name of certain
 # variables for getting the parsed results.
 #
-# ((${prefix}opts))    → $val(echo "${id}_OPTS");
-# ((${prefix}args))    → $val(echo "${id}_ARGS");
-# ((${prefix}lists))   → $val(echo "${id}_LIST");
+# ((${prefix}opts))    → $v(echo "${id}_OPTS");
+# ((${prefix}args))    → $v(echo "${id}_ARGS");
+# ((${prefix}lists))   → $v(echo "${id}_LIST");
 #
 # Plus for each ``+`` type argument defined:
 #
-# ((${prefix}${listsep}${name}))   → $val(echo "${id}_${name}_VALS");
+# ((${prefix}${listsep}${name}))   → $v(echo "${id}_${name}_VALS");
 #
 lum::getopts() {
   [ $# -lt 1 ] && lum::help::usage

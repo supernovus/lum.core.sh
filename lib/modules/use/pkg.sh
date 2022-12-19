@@ -1,25 +1,20 @@
 #$< lum::use::pkg
 # Support for loading lum.sh PACKAGE.conf files.
 
-[ -z "$LUM_CORE_PKG_DIR" ] && LUM_CORE_PKG_DIR="$(dirname "$LUM_CORE_LIB_DIR")"
-
 LUM_INST_PKG="$(dirname "$LUM_CORE_PKG_DIR")"
 
 declare -gi LUM_INST_DEV=0 LUM_USE_PKG_FATAL=1
 declare -ga LUM_PKG_ROOTS=("$LUM_INST_PKG")
 lum::var LUM_PKG_SCOPE =? '.'
 
+lum::use --conf --opt site-packages
+
 # Internal function to detect the core installation type
 lum::use::pkg--detect-core() {
   local coreName="$(basename "$LUM_CORE_PKG_DIR")"
-  local instConf="$LUM_INST_PKG/lum-pkg/etc/installation.conf"
   case "$coreName" in 
     lum-core)
-      if [ -f "$instConf" ]; then
-        . "$instConf"
-        [ -n "$LUM_SITE_PKG" -a "$LUM_SITE_PKG" != "$LUM_INST_PKG" ] \
-          && LUM_PKG_ROOTS+=("$LUM_SITE_PKG")
-      fi
+      LUM_INST_DEV=0
     ;;
     core)
       LUM_INST_DEV=1
@@ -39,8 +34,11 @@ else
 fi
 
 lum::use::pkg() {
+  local cacheKey="@pkg:${1/::/-}"
+  [ "${LUM_USE_NAMES[$cacheKey]}" = "1" ] && return
   local pkgdir="$(lum::pkg::find "$1")"
   [ $? -eq 0 ] && lum::use::pkg::conf "$pkgdir"
+  LUM_USE_NAMES[$cacheKey]=1
 }
 
 lum::pkg::find() {
@@ -65,8 +63,8 @@ lum::use::pkg::conf() {
   local pkgdir="$1" lib ns spec
 
   local PACKAGE VERSION
-  local -a CALLED AUTO
-  local -A BIN LIB DEPS
+  local -a AUTO
+  local -A BIN LIB ETC DEPS
 
   . "$pkgdir/PACKAGE.conf"
 

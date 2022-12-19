@@ -26,10 +26,10 @@ declare -gA LUM_VAR_REBOOTED
 #                   If set, at least one arg must be passed.
 #
 # [[args...]]         If $i(-c); mode is on, a set of commands to run.
-#                   Otherwise we output the args to $val(STDERR); with 
+#                   Otherwise we output the args to $v(STDERR); with 
 #                   ``«$key»`` prepended as a header.
 #
-# The test is: $fmt(\v ${LUM_DEBUG[ \p $key \v ]} \: \. >= \. \p $tval \;);
+# The test is: $_(\v ${LUM_DEBUG[ \p $key \v ]} \: \. >= \. \p $tval \;);
 #
 lum::debug() {
   if [ $# -eq 0 ]; then
@@ -52,7 +52,7 @@ lum::debug() {
       -s)
         [ $# -ne 2 ] && lum::help::usage
         LUM_DEBUG[$dbgKey]="$2"
-        echo "$dbgKey = $dbgVal" >&2
+        echo "[$dbgKey]=$2" >&2
         return
       ;;
       -t)
@@ -560,8 +560,7 @@ lum::fn::help --core -f '*' \
     fmt-pre arg opt syntax fmt-end \
   -m 2 summary \
     fmt-pre \
-  -g more fmt-pre value param arg opt syntax fmt-end \
-  -g docs fmt-pre value syntax fmt-end escape
+  -g more fmt-pre value param arg opt syntax fmt-end
 
 lum::fn lum::fn 1 -h opts more
 lum::fn lum::var 5 -h 0 more
@@ -590,7 +589,7 @@ lum::fn::help --core -f 'lum::fn::help' -m 0 more
 # The required arguments will be shown below in a ``$1{name}`` format,
 # where ``1`` is the positional argument number, and ``name`` is simply a
 # description of the argument. The ``$F`` symbol is the mandatory ((name))
-# argument passed to $val(lum::fn); before any of these arguments.
+# argument passed to $v(lum::fn); before any of these arguments.
 #
 # ((-a))   → lum::fn::alias $i($F); (($1{name} $2{opts} $3{list}))
 # ((-A))   → lum::fn::alias (($F $1{aname} $2{group}))

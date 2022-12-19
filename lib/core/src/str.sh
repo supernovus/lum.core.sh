@@ -9,8 +9,8 @@ lum::fn lum::str::pad 0 -h 0 more
 # ((len))     → The length the final string should be.
 # ((string))  → One or more strings to concat.
 # ((opts))    → Options:
-#  $val(-f);         → Add the padding to the front rather than the end.
-#  $val(-c); <<char>>  → Use ((char)) for padding instead of `{space}`.
+#  $v(-f);         → Add the padding to the front rather than the end.
+#  $v(-c); <<char>>  → Use ((char)) for padding instead of `{space}`.
 #
 lum::str::pad() {
   local char fmt='%-'

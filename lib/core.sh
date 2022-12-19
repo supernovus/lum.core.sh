@@ -13,6 +13,8 @@ invalid_bash() {
 if [ -z "$LUM_CORE" ]; then
   declare -gr SCRIPTNAME="$(basename $0)"
   declare -gr LUM_CORE_LIB_DIR="$(dirname ${BASH_SOURCE[0]})"
+  declare -gr LUM_CORE_PKG_DIR="$(dirname "$LUM_CORE_LIB_DIR")"
+  declare -gr LUM_CORE_ETC_DIR="$LUM_CORE_PKG_DIR/etc"
   declare -gr LUM_CORE=1
   declare -gi LUM_CORE_REBOOT=0
   declare -gA LUM_DEBUG
@@ -27,5 +29,6 @@ fi
 # Load the rest of the core sub-modules.
 lum::use::load-subs "$LUM_CORE_LIB_DIR/core/src"
 
-## Add our module path.
+## Add our module path, and config path.
 lum::use::libdir "$LUM_CORE_LIB_DIR/modules" lum::
+lum::use::confdir "$LUM_CORE_ETC_DIR"

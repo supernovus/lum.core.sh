@@ -23,6 +23,7 @@ lum::var -P LUM_SHELL_ \
     'u' = "@lum::use" \
     'U' = "@lum::use --reload" \
     'p' = "lum::use::pkg" \
+    'd' = "@lum::debug" \
     ';' = "history -c" \
     ':' = "eval" \
     '@' = "lum::test::shell::prompt" \
@@ -45,6 +46,7 @@ lum::fn lum::test::shell 0 -a "$SCRIPTNAME" 1 0 -h 0 more
 # $shell(p); <<pkg>>    → Enable the ((pkg)) (see $see(lum::use::pkg);).
 # $shell(u); <<lib>>    → Use the ((lib)) library (see $see(lum::use);).
 # $shell(U); <<lib>>    → Use the ((lib)) library (force reload).
+# $shell(d); <<arg...>> → Set debug settings (see $see(lum::debug);).
 # $shell(c); [[ctx]]    → Get/Set the context (see $see(shell-ctx);).
 # $shell(C);          → Toggle the context subshell mode.
 # $shell(@); <<msg>>    → Set the prompt message.
@@ -131,7 +133,7 @@ lum::fn lum::test::shell::ctx 0 -a shell-ctx 1 0
 # shell evaluates statements. Normally this would be a shell function name,
 # and possibly some leading arguments. There are a few special values:
 # 
-# - If one of ``0 1 2``, uses '$val(lum::fn::run); ((ctx))'.
+# - If one of ``0 1 2``, uses '$_(\vlum::fn::run \pctx\;);'.
 # - If the ``-`` character, use an empty context.
 #   With an empty context, the input lines are evaluated as bash statements.
 #

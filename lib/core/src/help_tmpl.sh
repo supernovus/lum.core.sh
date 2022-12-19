@@ -3,17 +3,17 @@
 
 lum::var -P LUM_HELP_ \
   -i TMPL_INIT = 0 \
-  -a FMT_ESC \
   -A DEFS THM \
   -A= FMT_HL \
      b = bold \
      h = header \
      i = item \
      p = param \
+     a = arg \
+     o = opt \
      e = '!' \
      s = syntax \
      v = value \
-     val = value \
      -
 
 lum::fn lum::help::def 0 -h 0 more
@@ -103,37 +103,38 @@ lum::help::tmpl--init() {
   lum::help::def opt M $LHT::opt '(.*?)\[\[(\w+)(\.\.\.)?(=)?(\S+)?\]\](.*)'
   lum::help::def param M $LHT::hl '(.*?)\(\((.*?)\)\)(.*?)'
   lum::help::def value M $LHT::hl '(.*?)``(.*?)``(.*)' "'"
-  lum::help::def syntax M $LHT::hl '(.*?)`\{(.*?)\}`(.*)'
+  lum::help::def syntax M $LHT::code '(.*?)`\{(.*?)\}`(.*)'
   lum::help::def fmt-pre M $LHT::fmt '(.*?)\$(\w+)\((.*?)\);(.*)'
   lum::help::def fmt-end M $LHT::fmt '(.*?)\$(\w+)\{(.*?)\};(.*)'
-  lum::help::def escape M $LHT::del '(.*?)\\\\(.*)'
 
   ## Mark this as done
   LUM_HELP_TMPL_INIT=1
 }
 
-lum::fn lum::help::tmpl 4 -h 0 docs -h fmt docs
+lum::fn lum::help::tmpl 4 -h 0 more -h fmt more
 #$ - Default help template defs
 #
-# The following pre-defined defs are used in the default help groups.
+# $b(modes  name       syntax        example(s));
 #
-# [+++] ``fmt-pre``      `{$\\fn(args)\\;}`
-# [+--] ``value``        `{$esc(``value``);}`
-# [+--] ``param``        `{$esc(((param)));}`
-# [-+-] ``arg``          `{$esc(<<mandatory>>);}`
-# [-+-] ``opt``          `{$esc([[optional=default]]);}`
-# [++-] ``syntax``       `{$esc(`{syntax}`);}`
-# [++-] ``fmt-end``      `{$\\fn{args}\\;}`
+# [+++] ``fmt-pre``   `{$\vfn\:(\vargs\:)\ ;}`   `{--}`
+# [+--] ``value``     `{`\ `\vvalue\:`\ `}`     ``value``
+# [+--] ``param``     `{(\ (\vparam\:)\ )}`     ((param))
+# [-+-] ``arg``       `{<\ <\vargument\:>\ >}`  <<arg>> <<args...>>
+# [-+-] ``opt``       `{[\ [\voption\:]\ ]}`    [[opt]] [[opt=def]] [[opts...]]
+# [++-] ``syntax``    `{`\:{\vsyntax\:}\:`}`   `{--}`
+# [++-] ``fmt-end``   `{$\vfn\:{\vargs\:}\ ;}`   `{--}`
 #
 # [012] ← Each column represents a help mode.
 #         ``+`` = Supported by default in that mode.
 #         ``-`` = Not supported by default.
+#         ``0`` = ``default``
+#         ``1`` = ``usage``
+#         ``2`` = ``summary``
 #
 # Extra help group ``more`` includes ALL the defs, in the order shown.
-# Special help group ``docs`` also includes an ``escape`` def which allows
-# double forward slashes to be used in docs requiring examples of the above.
 #
-# See $see(,fmt); for a list of tag names supported.
+# See $see(,fmt); for info on the ``fmt-*`` defs.
+# See $see(,syntax); for info on the ``syntax`` formatting.
 #
 lum::help::tmpl() {
   local -n tmplDefs="$1"
@@ -215,7 +216,7 @@ lum::help::tmpl::opt() {
   local eq="$5"
   local def="$6"
 
-  param="${TC[:]}[${TC[arg]}$arg${TC[:]}"
+  param="${TC[:]}[${TC[opt]}$arg${TC[:]}"
   [ "$eq" = "=" -a -n "$def" ] && param+="$eq${TC[def]}$def${TC[:]}"
   [ -n "$rep" ] && param+="$rep"
   param+="]${TC[;]}"
@@ -233,11 +234,13 @@ lum::help::tmpl::hl() {
   tmplText="$before$param$after"
 }
 
-lum::help::tmpl::del() {
-  ## $2 is always before text, last arg will be after text.
-  local before="$2" ai="$#"
-  local after="${!ai}"
-  tmplText="$before$after"
+lum::help::tmpl::code() {
+  local before="$2"
+  local after="$4"
+  local arg="\:$3\;"
+  local repValue
+  lum::help::tmpl::fmt::_ "$arg"
+  tmplText="$before$repValue$after"
 }
 
 lum::help::tmpl::fmt() {
@@ -286,6 +289,13 @@ lum::help::tmpl::fmt::pad() {
   repValue="$(lum::str::pad $1)"
 }
 
+lum::help::tmpl::fmt::X() {
+  local -a xo=($@)
+  local -i xr="${xo[0]:-1}"
+  local xv="${xo[1]:- }"
+  repValue="$(lum::str::repeat "$xv" $xr)"
+}
+
 lum::help::tmpl::fmt::line() {
   local -i width=$lineWidth
   local title
@@ -316,72 +326,57 @@ lum::help::tmpl::fmt::see() {
   repValue="${TC[item]}$link${TC[;]}"
 }
 
-lum::help::tmpl::fmt::fmt() {
-  local word cc tc
-  local -i wlen=0 sp=0
-  repValue=""
-  for word in $1; do
-    if [ "${#word}" -eq 2 -a "${word:0:1}" = '\' ]; then
-      cc="${word:1:1}"
-      if [ "$cc" = '.' ]; then
-        repValue+=" "
-        sp=0
-        continue
-      fi
-      tc="${LUM_HELP_FMT_HL[$cc]}"
-      [ -z "$tc" ] && tc="$cc"
-      cc="${TC[$tc]}"
-      if [ -n "$cc" ]; then
-        repValue+="$cc"
-        sp=0
-        continue
-      fi
-    fi
-    [ $sp -gt 0 ] && repValue+=" "
-    repValue+="$word"
-    ((sp++))
+lum::help::tmpl::fmt::_() {
+  local fmtCodeRegExp='\\([^.])' cc tc
+  repValue="$1"
+
+  while [[ $repValue =~ $fmtCodeRegExp ]]; do
+    cc="${BASH_REMATCH[1]}"
+    tc="${LUM_HELP_FMT_HL[$cc]}"
+    [ -z "$tc" ] && tc="$cc"
+    cc="${TC[$tc]}"
+    repValue="${repValue//"${BASH_REMATCH[0]}"/"$cc"}"
   done
+
+  repValue="${repValue//\\\./\\}"
 }
 
-lum::help::tmpl::fmt::esc() {
-  #lum::warn "fmt::esc"
-  case "${tmplOptions[class]}" in
-    fmt-pre)
-      local cc="${#LUM_HELP_FMT_ESC[@]}"
-      LUM_HELP_FMT_ESC+=("$1")
-      repValue="\$esc{$cc};"
-    ;;
-    fmt-end)
-      repValue="${LUM_HELP_FMT_ESC[$1]}"
-    ;;
-    *)
-      lum::err "how did we get here?"
-    ;;
-  esac
-}
-
-lum::help::tmpl::fmt::spc() {
-  local -i spaceOut="${1:-1}"
-  repValue="$(lum::str::repeat " " $spaceOut)"
-}
-
-#$ lum::help::tmpl,fmt - Format 
+#$ lum::help::tmpl,fmt - Formatting Functions
 #
-# $i(*); Colour-only codes: $b(b); $h(h); $i(i); $p(p); $e(e); $s(s); $v(v);.
-# $i(*); `{$\\spc(len?)\\;}` Insert $p(len); number of spaces (default ``1``).
-# $i(*); `{$\\pad(len text...)\\;}` will pad the text with spaces.
-# $i(*); `{$\\var(varname)\\;}` will display the $p(varname); variable.
-# $i(*); `{$\\bool(varname on? off?)\\;}` show $p(off); if $p(name); is ``0``, or $p(on); otherwise.
-#    $p(on); default value is ``on``, $p(off); default value is ``off``.
-# $i(*); `{$\\see(link pad?)\\;}` will display a link to another help item.
-#    If the $p(link); starts with a ``,`` it is a sub-topic of the current topic.
-#    $p(pad);        → If specified, pad the end of the string to this length.
-# $i(*); `{$\\line(width? caption?)\\;}` will draw a line.
-#    $p(width);      → If specified the line will be this long.
+# $i(*); Colour-only codes: $b(b); $h(h); $i(i); $p(p); $a(a); $o(o); $e(e); $s(s); $v(v);.
+# $i(*); `{$\ spc(\vlen\:)\ ;}` Insert ((len)) number of spaces (default ``1``).
+# $i(*); `{$\ pad(\vlen text...\:)\ ;}` will pad the text with spaces.
+# $i(*); `{$\ var(\vvarname\:)\ ;}` will display the ((varname)) variable.
+# $i(*); `{$\ bool(\vvarname on? off?\:)\ ;}` show ((off)) if ((name)) is ``0``, or ((on)) otherwise.
+#    ((on)) default value is ``on``, ((off)) default value is ``off``.
+# $i(*); `{$\ see(\vlink pad?\:)\ ;}` will display a link to another help item.
+#    If the ((link)) starts with a ``,`` it is a sub-topic of the current topic.
+#    ((pad))        → If specified, pad the end of the string to this length.
+# $i(*); `{$\ line(\vwidth? caption?\:)\ ;}` will draw a line.
+#    ((width))      → If specified the line will be this long.
 #                 Otherwise it will fill the width of the terminal.
-#    $p(caption);    → If specified, a caption will be embedded in the line.
+#    ((caption))    → If specified, a caption will be embedded in the line.
 #    You can specify either one without specifying the other.
 #    However to specify BOTH, they MUST be in the order shown.
 #$line();
+# $i(*); `{$\ _(\vformat text\:)\ ;}` see $see(,syntax);
 #
 #: lum::help::tmpl,fmt
+
+#$ lum::help::tmpl,syntax - Advanced Syntax
+#
+# When advanced formatting is required, there are two built-in syntaxes:
+#
+# $i(*); `{`\:{\vblock of text\:}\:`}`  → A syntax block, adds $v(\:); prefix and $v(\;); suffix.
+# $i(*); `{$\ _(\vblock of text\:)\ ;}` → A format block, no prefix or suffix added.
+#
+# Special escape codes are used to apply additional formatting:
+#
+# $i(*); Set colours: $b(\b); $h(\h); $i(\i); $p(\p); $a(\a); $o(\o); $e(\e \!); $s(\s \:); $v(\v);
+# $i(*); End colours: \;
+# $i(*); Show \ char: \.
+#
+# If an unrecognized $v(\X); code is found, it will simply be stripped.
+# This can be used to escape documentation syntax.
+#
+#: lum::help::tmpl,syntax
