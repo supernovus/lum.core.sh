@@ -117,7 +117,7 @@ lum::var+() {
 # ``-P <<prefix>>``        → Following variables will be prefixed with this.
 # ``-S <<suffix>>``        → Following variables will be suffixed with this.
 #
-# <<T>>=[[end='--']] <<var>> → Set the context (see below).
+# <<T>>=[[end='-']] <<var>> → Set the context (see below).
 #                        ((T)) can be one of ``-a -A``.
 #
 # A ((prefix)) or ((suffix)) value of ``-`` is the same as ``""``.
