@@ -34,7 +34,7 @@ else
 fi
 
 lum::use::pkg() {
-  local cacheKey="@pkg:${1/::/-}"
+  local cacheKey="@pkg:${1//::/-}"
   [ "${LUM_USE_NAMES[$cacheKey]}" = "1" ] && return
   local pkgdir="$(lum::pkg::find "$1")"
   [ $? -eq 0 ] && lum::use::pkg::conf "$pkgdir"
@@ -42,7 +42,7 @@ lum::use::pkg() {
 }
 
 lum::pkg::find() {
-  local pkg="${1/::/-}"
+  local pkg="${1//::/-}"
   local -n fatal="LUM_USE_PKG_FATAL"
 
   [ $LUM_INST_DEV -eq 1 ] && pkg="${pkg/lum-/}"
