@@ -32,6 +32,8 @@ lum::use::pkg--conf() {
   for spec in "${AUTO[@]}"; do
     lum::use::pkg--conf-auto $spec
   done
+
+  return 0
 }
 
 lum::use::pkg--conf-auto() {

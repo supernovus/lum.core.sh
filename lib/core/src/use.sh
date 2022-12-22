@@ -3,7 +3,7 @@
 
 lum::var -P LUM_ \
   -a LIB_DIRS CONF_DIRS CONF_ALIASES \
-  -A USE_NAMES USE_FILES LIB_PREFIX_DIR CONF_PREFIX_DIR \
+  -A USE_NAMES USE_FILES LIB_PREFIX_DIR \
   -i USE_ERRCODE =? 222
 
 lum::fn::alias::group CONF 0 LUM_CONF_ALIASES
@@ -130,9 +130,9 @@ lum::use::find() {
 }
 
 lum::fn lum::use::findPrefixed
-#$ <<name>>
+#$ <<name>> [[list=LUM_LIB_PREFIX_DIR]]
 #
-# Look for a file in our prefixed library paths.
+# Look for a file in one of our prefixed paths.
 # 
 # For each of library prefixes registered, see if the
 # requested name starts with the prefix, and if it does,
@@ -140,15 +140,17 @@ lum::fn lum::use::findPrefixed
 # see if the file exists.
 #
 # ((name))   The filename we're looking for.
+# ((list))   Name of a ``-A`` map of prefix => path.
 #
 lum::use::findPrefixed() {
   [ $# -lt 1 ] && lum::help::usage
   local tryfile AD AF="$1" prefix
+  local -n AL="${2:-LUM_LIB_PREFIX_DIR}"
   #echo "looking for $AF via prefix" >&2
-  for prefix in "${!LUM_LIB_PREFIX_DIR[@]}"; do
+  for prefix in "${!AL[@]}"; do
     #echo "checking '$prefix' prefix" >&2
     lum::str::startsWith "$AF" "$prefix" || continue
-    AD="${LUM_LIB_PREFIX_DIR[$prefix]}"
+    AD="${AL[$prefix]}"
     [ ! -d "$AD" ] && continue
     tryfile="${AF/$prefix/$AD\/}"
     tryfile="${tryfile//::/\/}"
@@ -159,13 +161,13 @@ lum::use::findPrefixed() {
 }
 
 lum::fn lum::use::libdir
-#$ <<directory>> [[libprefix]]
+#$ <<directory>> [[prefix]]
 #
 # Add a path containing libraries.
 #
 # ((directory))  The directory with the library files.
 #
-# ((libprefix))  If specified, libraries prefixed with the
+# ((prefix))     If specified, libraries prefixed with this
 #            name will use this directory by default.
 #
 lum::use::libdir() {
