@@ -56,7 +56,7 @@ lum::fn::run() {
   if lum::fn::is "$cmd"; then
     "$cmd" "$@"
   else 
-    lum::fn::run-err "$fname"
+    lum::fn::run-err "$fname" "$cmd"
   fi
 }
 
@@ -64,7 +64,9 @@ lum::fn::run() {
 # Private sub-function for lum::fn::run
 lum::fn::run-err() {
   local err="${LUM_THEME[error]}" end="${LUM_THEME[end]}"
-  lum::err "Unrecognized command '$err$1$end' specified" 1
+  local msg="Unrecognized command '$err$1$end'"
+  [ -n "$2" ] && msg="$msg ($err$2$end)"
+  lum::err "$msg specified" 1
 }
 
 lum::fn lum::fn::copy
