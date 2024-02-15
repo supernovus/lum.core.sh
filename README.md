@@ -20,6 +20,24 @@ and [PHP](https://github.com/supernovus/lum.core.php).
 - (g)awk
 - grep
 
+## Plans
+
+I am planning on a major revision of this entire system.
+The current implementation, while very flexible, is not very efficient.
+It is in fact quite slow compared to my older scripts.
+A lot of that is due to the convoluted "inline" documentation system, but
+there's several places that could be overhauled to be far more optimized.
+
+I am planning to support a new _compiler_, which will take source files and 
+use them to generate optimized executable scripts, extracting the documentation
+for each command into its own pre-compiled script file, as well as several 
+other potential optimizations.
+
+As this would be a massive change, likely breaking backwards compatibility,
+it will be released as version `2.0` of the core library, and existing
+library extensions and scripts using the libraries would need to be reworked to
+support the new compiled methodology.
+
 ## Author
 
 Timothy Totten <2010@totten.ca>
