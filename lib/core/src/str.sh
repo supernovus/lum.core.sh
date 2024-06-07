@@ -6,33 +6,36 @@ lum::fn lum::str::pad 0 -h 0 more
 #
 # Pad a string to a specified length.
 #
-# ((len))     → The length the final string should be.
-# ((string))  → One or more strings to concat.
-# ((opts))    → Options:
-#  $v(-f);         → Add the padding to the front rather than the end.
-#  $v(-c); <<char>>  → Use ((char)) for padding instead of `{space}`.
+# ((len))     → Length (negative pads at end, positive at front).
+# ((string))  → One or more strings to concat prior to padding.
+# ((opts))    → Formatting options:
+#  $v(-n);        → Do not append a newline.
+#  $v(-e);        → Enable all escape characters.
+#  $v(-E);        → Disable all escape characters.
+#  $v(-c); <<char>> → Use ((char)) for padding instead of `{space}`.
 #
 lum::str::pad() {
-  local char fmt='%-'
+  local char
+  local -a opts
   while [ $# -gt 0 ]; do
     case "$1" in
+      -n|-e|-E)
+        opts+=($1)
+        shift
+      ;;
       -c)
         char="$2"
         shift 2
       ;;
-      -f)
-        fmt='%'
-        shift
-      ;;
       *)
-        break;
+        break
       ;;
     esac
   done
 
   [ $# -lt 2 ] && lum::help::usage
   local -i len=$1
-  fmt+="${len}s"
+  local fmt="%${len}s"
   shift
 
   local string="$@"
@@ -49,8 +52,8 @@ lum::str::pad() {
         || padded="$padding$string"
     fi
   fi
-  
-  echo "$padded"
+
+  echo ${opts[@]} "$padded"
 }
 
 lum::fn lum::str::repeat

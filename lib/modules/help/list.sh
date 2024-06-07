@@ -77,7 +77,7 @@ lum::help::list() {
   [ $max -eq -1 ] && max="$(lum::help::width)"
 
   for K in "${sourceList[@]}"; do
-    C="$(lum::str::pad $pad "$pf$K$sf")"
+    C="$(lum::str::pad -$pad "$pf$K$sf")"
     if [ $follow -eq 0 -a -n "${LUM_ALIAS_FN[$K]}" ]; then
       U="$pc${LUM_ALIAS_FN[$K]}$ec"
       W="$pc$ec"

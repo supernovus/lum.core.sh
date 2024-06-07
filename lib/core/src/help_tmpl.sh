@@ -313,7 +313,7 @@ lum::help::tmpl::fmt::line() {
   if [ -z "$title" ]; then
     repValue="$(lum::str::repeat "─" $width)"
   else
-    repValue="$(lum::str::pad -c "─" "$width" "─($title)")"
+    repValue="$(lum::str::pad -c "─" "-$width" "─($title)")"
   fi
 }
 
@@ -322,7 +322,7 @@ lum::help::tmpl::fmt::see() {
   local link="${seeOpts[0]}"
   local -i pad="${seeOpts[1]:-0}"
   [ "${link:0:1}" = ',' ] && link="${helpOptions[root]}$link"
-  [ $pad -gt 0 ] && link="$(lum::str::pad "$pad" "$link")"
+  [ $pad -gt 0 ] && link="$(lum::str::pad "-$pad" "$link")"
   repValue="${TC[item]}$link${TC[;]}"
 }
 
