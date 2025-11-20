@@ -20,7 +20,7 @@ and [PHP](https://github.com/supernovus/lum.core.php).
 - (g)awk
 - grep
 
-## Plans
+## Future Development Plans (2024-02-15)
 
 I am planning on a major revision of this entire system.
 The current implementation, while very flexible, is not very efficient.
@@ -37,6 +37,14 @@ As this would be a massive change, likely breaking backwards compatibility,
 it will be released as version `2.0` of the core library, and existing
 library extensions and scripts using the libraries would need to be reworked to
 support the new compiled methodology.
+
+### Update (2025-11-20)
+
+Okay, it's been quite some time since I added the plans, and I haven't
+touched any of these libraries. There's some good stuff hidden in this mess,
+but trying to refactor this into something less convoluted is going to be more
+work than simply pulling out any useful features and adding them to a new
+library set that isn't convoluted to begin with. So that's my current plan.
 
 ## Author
 
