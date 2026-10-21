@@ -10,7 +10,7 @@ lum::fn lum::colour::isSupported
 #
 lum::colour::isSupported() {
   case "$TERM" in
-    xterm*|linux|ansi|screen)
+    xterm*|linux|ansi|screen|tmux*)
       return 0
     ;;
     *)
